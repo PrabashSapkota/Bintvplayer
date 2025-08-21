@@ -31,7 +31,7 @@
             width: 100%;
             height: 100%;
             display: block;
-            object-fit: cover; /* Changed to cover for better full-screen appearance */
+            object-fit: cover;
         }
         .controls-container {
             position: absolute;
@@ -255,26 +255,6 @@
         #player-container.hide-controls .watermark {
             opacity: 0;
         }
-        .views-count {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            display: flex;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            pointer-events: none;
-            z-index: 50;
-            transition: opacity 0.3s ease;
-        }
-        #player-container.hide-controls .views-count {
-            opacity: 0;
-        }
         @media (max-width: 768px) {
             .controls-container {
                 padding: 5px 10px;
@@ -299,16 +279,8 @@
                 font-size: 1.2rem;
                 margin-right: 5px;
             }
-            .views-count {
-                font-size: 0.9rem;
-                padding: 6px 10px;
-            }
-            .views-count .fas {
-                font-size: 1.3rem;
-                margin-right: 6px;
-            }
             video {
-                object-fit: cover; /* Ensure video covers container on mobile */
+                object-fit: cover;
             }
         }
         .loading-spinner {
@@ -318,12 +290,12 @@
             left: 50%;
             transform: translate(-50%, -50%);
             border: 6px solid rgba(255, 255, 255, 0.2);
-            border-top: 6px solid #ff0000; /* Red spinner for visibility */
+            border-top: 6px solid #ff0000;
             border-radius: 50%;
             width: 60px;
             height: 60px;
             animation: spin 0.8s linear infinite;
-            z-index: 100; /* Increased z-index to ensure visibility */
+            z-index: 100;
         }
         @keyframes spin {
             0% { transform: translate(-50%, -50%) rotate(0deg); }
@@ -338,7 +310,6 @@
         <div class="watermark">
             <span class="logo-b">B</span><span>inTV</span>
         </div>
-       
         <div class="progress-bar-container" id="progressBarContainer">
             <div class="buffer-bar" id="bufferBar"></div>
             <div class="progress-bar" id="progressBar"></div>
@@ -386,8 +357,6 @@
             <p id="modalMessage"></p>
         </div>
     </div>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script>
         const video = document.getElementById('video-player');
@@ -407,7 +376,6 @@
         const fullscreenIcon = document.getElementById('fullscreen-icon');
         const controlsContainer = document.querySelector('.controls-container');
         const playerContainer = document.getElementById('player-container');
-        const liveViewersSpan = document.getElementById('liveViewers');
         const customModal = document.getElementById('customModal');
         const modalMessage = document.getElementById('modalMessage');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -418,42 +386,8 @@
         let volumeBeforeMute = video.volume;
         let hlsInstance;
         let controlsTimeout;
-
-        // Firebase Initialization
-        const firebaseConfig = {
-            apiKey: "AIzaSyClK3VctCd-Q1EV1Y3-TzSaeeb18rQPthc",
-            authDomain: "bintv-a01de.firebaseapp.com",
-            projectId: "bintv-a01de",
-            storageBucket: "bintv-a01de.firebasestorage.app",
-            messagingSenderId: "220818284192",
-            appId: "1:220818284192:web:b5975f2e6a7121c79773c5",
-            measurementId: "G-YZ5ZQEM6YB"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        const viewersRef = db.ref("live_viewers");
-
-        // Generate a unique viewer ID
-        const viewerId = Math.random().toString(36).substring(2);
-
-        // Presence system: Set viewer online status and remove on disconnect
-        const connectedRef = db.ref(".info/connected");
-        connectedRef.on("value", (snap) => {
-            if (snap.val() === true) {
-                const ref = viewersRef.child(viewerId);
-                ref.set(true);
-                ref.onDisconnect().remove();
-            }
-        });
-
-        // Listen for changes in the total number of viewers
-        viewersRef.on("value", (snap) => {
-            const count = snap.numChildren();
-            if (liveViewersSpan) {
-                liveViewersSpan.textContent = count;
-            }
-        });
+        let isBuffering = false;
+        let spinnerTimeout;
 
         // Function to show custom modal messages
         function showModal(message) {
@@ -471,18 +405,28 @@
             }
         }
 
+        // Function to manage spinner with debouncing
+        function manageSpinner(show) {
+            clearTimeout(spinnerTimeout);
+            if (show && !isPlaying) {
+                loadingSpinner.style.display = 'block';
+            } else {
+                spinnerTimeout = setTimeout(() => {
+                    loadingSpinner.style.display = 'none';
+                }, 200); // Debounce to prevent flicker
+            }
+        }
+
         // Function to load the M3U8 stream
         function loadM3u8Stream(url) {
             if (!url) {
                 showModal('No M3U8 URL provided. Please go back and enter one.');
-                loadingSpinner.style.display = 'none';
+                manageSpinner(false);
                 return;
             }
 
-            // Show loading spinner
-            loadingSpinner.style.display = 'block';
+            manageSpinner(true);
 
-            // Destroy existing HLS instance if it exists
             if (hlsInstance) {
                 hlsInstance.destroy();
                 console.log('Existing HLS instance destroyed.');
@@ -496,6 +440,8 @@
                     liveSyncDurationCount: 3,
                     liveMaxBufferLength: 30,
                     lowLatencyMode: true,
+                    maxBufferLength: 10, // Reduce buffer to minimize stalls
+                    maxMaxBufferLength: 20,
                 });
                 hlsInstance.loadSource(url);
                 hlsInstance.attachMedia(video);
@@ -504,23 +450,24 @@
                     console.log('HLS manifest parsed.');
                     video.play().catch(error => {
                         console.error('Auto-play failed:', error);
-                        loadingSpinner.style.display = 'none';
+                        manageSpinner(false);
+                        showModal('Auto-play failed. Please press play to start the stream.');
                     });
                 });
 
-                hlsInstance.on(Hls.Events.BUFFER_FLUSHING, function() {
-                    console.log('Buffer flushing, showing spinner.');
-                    loadingSpinner.style.display = 'block';
+                hlsInstance.on(Hls.Events.BUFFER_APPENDING, function() {
+                    if (!isPlaying) {
+                        manageSpinner(true);
+                    }
                 });
 
-                hlsInstance.on(Hls.Events.BUFFER_FLUSHED, function() {
-                    console.log('Buffer flushed, hiding spinner.');
-                    loadingSpinner.style.display = 'none';
+                hlsInstance.on(Hls.Events.BUFFER_APPENDED, function() {
+                    manageSpinner(false);
                 });
 
                 hlsInstance.on(Hls.Events.ERROR, function(event, data) {
                     if (data.fatal) {
-                        loadingSpinner.style.display = 'none';
+                        manageSpinner(false);
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
                                 console.error('Fatal network error:', data.details);
@@ -537,7 +484,7 @@
                                 break;
                         }
                     } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-                        loadingSpinner.style.display = 'block';
+                        manageSpinner(true);
                     }
                 });
 
@@ -545,22 +492,23 @@
                 video.src = url;
                 video.load();
 
-                video.addEventListener('canplay', function() {
+                video.addEventListener('canplaythrough', function() {
                     console.log('Native HLS loaded.');
-                    loadingSpinner.style.display = 'none';
+                    manageSpinner(false);
                     video.play().catch(error => {
                         console.error('Auto-play failed:', error);
-                        loadingSpinner.style.display = 'none';
+                        manageSpinner(false);
+                        showModal('Auto-play failed. Please press play to start the stream.');
                     });
                 }, { once: true });
 
                 video.addEventListener('error', function(e) {
                     console.error('Native HLS error:', e);
-                    loadingSpinner.style.display = 'none';
+                    manageSpinner(false);
                     showModal('Error loading video. Your browser might not support this stream directly, or the URL is invalid.');
                 }, { once: true });
             } else {
-                loadingSpinner.style.display = 'none';
+                manageSpinner(false);
                 showModal('Your browser does not support HLS video playback.');
             }
         }
@@ -573,36 +521,44 @@
             loadM3u8Stream(decodeURIComponent(videoSrcFromUrl));
         } else {
             showModal('No M3U8 URL provided in the address bar.');
-            loadingSpinner.style.display = 'none';
+            manageSpinner(false);
         }
 
         // Custom Controls Logic
         playPauseButton.addEventListener('click', () => {
             if (video.paused || video.ended) {
-                loadingSpinner.style.display = 'block';
+                manageSpinner(true);
                 video.play().catch(error => {
                     console.error('Playback prevented:', error);
-                    loadingSpinner.style.display = 'none';
+                    manageSpinner(false);
                     showModal('Playback failed. Please try again or check the stream URL.');
                 });
             } else {
                 video.pause();
-                loadingSpinner.style.display = 'none';
+                manageSpinner(false);
             }
         });
 
         video.addEventListener('playing', () => {
-            loadingSpinner.style.display = 'none';
             isPlaying = true;
+            manageSpinner(false);
             updatePlayPauseIcon();
         });
 
         video.addEventListener('waiting', () => {
-            loadingSpinner.style.display = 'block';
+            if (!isPlaying) {
+                manageSpinner(true);
+            }
         });
 
         video.addEventListener('stalled', () => {
-            loadingSpinner.style.display = 'block';
+            if (!isPlaying) {
+                manageSpinner(true);
+            }
+        });
+
+        video.addEventListener('canplaythrough', () => {
+            manageSpinner(false);
         });
 
         function updatePlayPauseIcon() {
