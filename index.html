@@ -13,14 +13,14 @@
             width: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prevent scrolling */
+            overflow: hidden;
             font-family: 'Inter', sans-serif;
-            background-color: #0a0a0a; /* Ensure a consistent background */
+            background-color: #0a0a0a;
         }
         #player-container {
             position: relative;
-            width: 100vw; /* Take full viewport width */
-            height: 100vh; /* Take full viewport height */
+            width: 100vw;
+            height: 100vh;
             background-color: #000;
             overflow: hidden;
             display: flex;
@@ -31,9 +31,8 @@
             width: 100%;
             height: 100%;
             display: block;
-            object-fit: contain; /* Ensures video fits within its container without cropping */
+            object-fit: cover; /* Changed to cover for better full-screen appearance */
         }
-
         .controls-container {
             position: absolute;
             bottom: 0;
@@ -46,33 +45,33 @@
             transition: opacity 0.3s ease;
             cursor: default;
             display: flex;
-            flex-direction: column; /* Stack progress bar and other controls */
+            flex-direction: column;
             justify-content: flex-end;
         }
         #player-container.hide-controls .controls-container {
             opacity: 0;
-            pointer-events: none; /* Disable interaction when hidden */
+            pointer-events: none;
         }
         .progress-bar-container {
             position: absolute;
-            top: 0; /* Positioned back to top of the controls-container */
+            top: 0;
             left: 0;
             right: 0;
             height: 5px;
             background-color: rgba(255, 255, 255, 0.3);
             cursor: pointer;
-            z-index: 10; /* Ensure it's above the video layer */
-            opacity: 1; /* Default visible */
-            transition: opacity 0.3s ease; /* Add transition for smooth hide/show */
+            z-index: 10;
+            opacity: 1;
+            transition: opacity 0.3s ease;
         }
         #player-container.hide-controls .progress-bar-container {
             opacity: 0;
-            pointer-events: none; /* Hide and prevent interaction */
+            pointer-events: none;
         }
         .progress-bar {
             height: 100%;
             width: 0%;
-            background-color: #8b0000; /* Dark red progression bar */
+            background-color: #8b0000;
             border-radius: 2px;
         }
         .buffer-bar {
@@ -81,18 +80,18 @@
             left: 0;
             height: 100%;
             background-color: rgba(255, 255, 255, 0.5);
-            z-index: 1; /* Below progress bar */
+            z-index: 1;
         }
         .thumb {
             position: absolute;
             top: 50%;
-            left: 0%; /* Will be updated by JS */
+            left: 0%;
             transform: translate(-50%, -50%);
             width: 15px;
             height: 15px;
             background-color: #ff0000;
             border-radius: 50%;
-            display: none; /* Hidden by default, shown on hover */
+            display: none;
             z-index: 3;
         }
         .progress-bar-container:hover .thumb {
@@ -137,7 +136,7 @@
         }
         .slider-wrapper {
             position: relative;
-            width: 80px; /* Adjust as needed */
+            width: 80px;
             height: 4px;
             background-color: rgba(255, 255, 255, 0.3);
             border-radius: 2px;
@@ -148,14 +147,14 @@
             appearance: none;
             width: 100%;
             height: 100%;
-            background: transparent; /* Hide default track */
+            background: transparent;
             outline: none;
             margin: 0;
             position: absolute;
             top: 0;
             left: 0;
             cursor: grab;
-            z-index: 2; /* Make it clickable */
+            z-index: 2;
         }
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -183,17 +182,16 @@
             background-color: #fff;
             border-radius: 2px;
         }
-        /* Custom modal for messages */
         .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1000; /* Sit on top */
+            display: none;
+            position: fixed;
+            z-index: 1000;
             left: 0;
             top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
             justify-content: center;
             align-items: center;
         }
@@ -223,7 +221,6 @@
             text-decoration: none;
             cursor: pointer;
         }
-        /* Watermark Styles */
         .watermark {
             position: absolute;
             top: 15px;
@@ -231,106 +228,102 @@
             display: flex;
             align-items: center;
             color: rgba(255, 255, 255, 0.7);
-            font-size: 1.1rem; /* Base font size for 'inTV' */
+            font-size: 1.1rem;
             font-weight: 600;
-            pointer-events: none; /* Allow clicks to pass through to video */
-            z-index: 50; /* Above video, below controls */
+            pointer-events: none;
+            z-index: 50;
             text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
             opacity: 0.8;
             transition: opacity 0.3s ease;
         }
         .watermark .logo-b {
-            height: 28px; /* Increased size for circle */
-            width: 28px; /* Maintain aspect ratio */
-            background-color: #007bff; /* Blue background for the "B" */
-            border-radius: 50%; /* Circular shape */
+            height: 28px;
+            width: 28px;
+            background-color: #007bff;
+            border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.4rem; /* Size of the 'B' character itself */
-            font-weight: 900; /* Extra bold for 'B' */
-            color: #fff; /* White color for 'B' */
-            margin-right: 6px; /* Reduced space between 'B' and 'inTV' */
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #fff;
+            margin-right: 6px;
             box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
-            text-shadow: none; /* Remove text shadow for the 'B' to keep it clean */
-            line-height: 1; /* Helps vertical centering */
+            text-shadow: none;
+            line-height: 1;
         }
-        /* Hide watermark when controls are hidden to avoid clutter */
         #player-container.hide-controls .watermark {
             opacity: 0;
         }
-
-        /* Views Count Display */
         .views-count {
             position: absolute;
             top: 15px;
             left: 15px;
             display: flex;
             align-items: center;
-            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
-            color: #fff; /* White color for text */
-            padding: 8px 12px; /* Increased padding */
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            padding: 8px 12px;
             border-radius: 5px;
-            font-size: 1.1rem; /* Bigger font size */
-            font-weight: bold; /* Bold text */
+            font-size: 1.1rem;
+            font-weight: bold;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            pointer-events: none; /* Allow clicks to pass through */
+            pointer-events: none;
             z-index: 50;
             transition: opacity 0.3s ease;
         }
-       
-        /* Hide views count when controls are hidden */
         #player-container.hide-controls .views-count {
             opacity: 0;
         }
-
-        /* Responsive adjustments for controls padding */
         @media (max-width: 768px) {
             .controls-container {
-                padding: 5px 10px; /* Reduced padding for mobile */
+                padding: 5px 10px;
             }
             .control-button {
-                padding: 6px; /* Smaller buttons on mobile */
-                font-size: 1.2rem; /* Smaller icons on mobile */
+                padding: 6px;
+                font-size: 1.2rem;
             }
             .text-sm {
-                font-size: 0.75rem; /* Smaller text on mobile */
+                font-size: 0.75rem;
             }
             .live-indicator {
                 padding: 3px 6px;
                 font-size: 0.7rem;
             }
             .watermark {
-                font-size: 1rem; /* Mobile text size for 'inTV' */
+                font-size: 1rem;
             }
             .watermark .logo-b {
-                height: 24px; /* Mobile size for circle */
+                height: 24px;
                 width: 24px;
-                font-size: 1.2rem; /* Mobile size for 'B' character */
+                font-size: 1.2rem;
                 margin-right: 5px;
             }
             .views-count {
-                font-size: 0.9rem; /* Slightly smaller for mobile */
+                font-size: 0.9rem;
                 padding: 6px 10px;
             }
             .views-count .fas {
-                font-size: 1.3rem; /* Slightly smaller icon for mobile */
+                font-size: 1.3rem;
                 margin-right: 6px;
             }
+            video {
+                object-fit: cover; /* Ensure video covers container on mobile */
+            }
         }
-        /* Loading Spinner CSS */
         .loading-spinner {
-            display: none; /* Hidden by default */
+            display: none;
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #fff;
+            border: 6px solid rgba(255, 255, 255, 0.2);
+            border-top: 6px solid #ff0000; /* Red spinner for visibility */
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
+            width: 60px;
+            height: 60px;
+            animation: spin 0.8s linear infinite;
+            z-index: 100; /* Increased z-index to ensure visibility */
         }
         @keyframes spin {
             0% { transform: translate(-50%, -50%) rotate(0deg); }
@@ -339,24 +332,21 @@
     </style>
 </head>
 <body>
-
     <div id="player-container">
         <video id="video-player" playsinline></video>
-        
         <div id="loading-spinner" class="loading-spinner"></div>
-        
         <div class="watermark">
             <span class="logo-b">B</span><span>inTV</span>
         </div>
-
+       
         <div class="progress-bar-container" id="progressBarContainer">
             <div class="buffer-bar" id="bufferBar"></div>
             <div class="progress-bar" id="progressBar"></div>
             <div class="thumb" id="progressThumb"></div>
         </div>
-
         <div class="controls-container">
-            <div class="flex items-center justify-between w-full p-4"> <div class="flex items-center space-x-2">
+            <div class="flex items-center justify-between w-full p-4">
+                <div class="flex items-center space-x-2">
                     <button id="play-pause-button" class="control-button">
                         <i class="fas fa-play" id="play-pause-icon"></i>
                     </button>
@@ -367,14 +357,12 @@
                         <div class="volume-fill" id="volumeFill"></div>
                         <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" class="volume-slider">
                     </div>
-
                     <span class="text-sm font-medium ml-2 text-white"><span id="current-time">0:00</span> / <span id="duration">0:00</span></span>
                     <div class="live-indicator flex items-center ml-4">
                         <span class="live-indicator-dot"></span>
                         LIVE
                     </div>
                 </div>
-
                 <div class="flex items-center space-x-2">
                     <button id="cc-button" class="control-button opacity-70 cursor-not-allowed hidden md:flex" title="Subtitles (Not Implemented)">
                         <i class="fas fa-closed-captioning"></i>
@@ -392,14 +380,12 @@
             </div>
         </div>
     </div>
-
     <div id="customModal" class="modal">
         <div class="modal-content">
             <span class="modal-close-button" id="closeModalBtn">&times;</span>
             <p id="modalMessage"></p>
         </div>
     </div>
-
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -422,7 +408,6 @@
         const controlsContainer = document.querySelector('.controls-container');
         const playerContainer = document.getElementById('player-container');
         const liveViewersSpan = document.getElementById('liveViewers');
-
         const customModal = document.getElementById('customModal');
         const modalMessage = document.getElementById('modalMessage');
         const closeModalBtn = document.getElementById('closeModalBtn');
@@ -465,14 +450,12 @@
         // Listen for changes in the total number of viewers
         viewersRef.on("value", (snap) => {
             const count = snap.numChildren();
-            // Update the span with ID 'liveViewers' with just the count
-            // Check if the span exists before updating
             if (liveViewersSpan) {
                 liveViewersSpan.textContent = count;
             }
         });
 
-        // Function to show custom modal messages instead of alert()
+        // Function to show custom modal messages
         function showModal(message) {
             modalMessage.textContent = message;
             customModal.style.display = 'flex';
@@ -488,10 +471,11 @@
             }
         }
 
-        // Function to load the M3u8 stream
+        // Function to load the M3U8 stream
         function loadM3u8Stream(url) {
             if (!url) {
                 showModal('No M3U8 URL provided. Please go back and enter one.');
+                loadingSpinner.style.display = 'none';
                 return;
             }
 
@@ -504,8 +488,8 @@
                 console.log('Existing HLS instance destroyed.');
             }
 
-            video.removeAttribute('src'); // Clear current src
-            video.style.display = 'block'; // Ensure video element is visible
+            video.removeAttribute('src');
+            video.style.display = 'block';
 
             if (Hls.isSupported()) {
                 hlsInstance = new Hls({
@@ -515,50 +499,44 @@
                 });
                 hlsInstance.loadSource(url);
                 hlsInstance.attachMedia(video);
-                
-                // Hide spinner on manifest parsed event
+
                 hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
-                    console.log('HLS manifest parsed. Video is ready.');
-                    loadingSpinner.style.display = 'none';
-                    video.muted = true;
-                    updatePlayPauseIcon();
-                    updateVolumeIcon();
-                    updateProgressBar();
+                    console.log('HLS manifest parsed.');
+                    video.play().catch(error => {
+                        console.error('Auto-play failed:', error);
+                        loadingSpinner.style.display = 'none';
+                    });
                 });
 
-                // Re-show spinner on buffer flush to indicate re-loading
                 hlsInstance.on(Hls.Events.BUFFER_FLUSHING, function() {
-                    console.log('Buffer flushing, showing loading spinner.');
+                    console.log('Buffer flushing, showing spinner.');
                     loadingSpinner.style.display = 'block';
                 });
-                
-                // Hide spinner once loading is complete after a flush
+
                 hlsInstance.on(Hls.Events.BUFFER_FLUSHED, function() {
-                    console.log('Buffer flushed, hiding loading spinner.');
+                    console.log('Buffer flushed, hiding spinner.');
                     loadingSpinner.style.display = 'none';
                 });
 
-                // Error handling
                 hlsInstance.on(Hls.Events.ERROR, function(event, data) {
                     if (data.fatal) {
-                        loadingSpinner.style.display = 'none'; // Hide spinner on fatal error
+                        loadingSpinner.style.display = 'none';
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.error('Fatal network error encountered, trying to recover:', data.details);
+                                console.error('Fatal network error:', data.details);
                                 hlsInstance.recoverMediaError();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.error('Fatal media error encountered, trying to recover:', data.details);
+                                console.error('Fatal media error:', data.details);
                                 hlsInstance.recoverMediaError();
                                 break;
                             default:
-                                console.error('Fatal error encountered, cannot recover:', data);
-                                showModal(`An unrecoverable error occurred: ${data.details}. Cannot play this stream.`);
+                                console.error('Unrecoverable error:', data);
+                                showModal(`An unrecoverable error occurred: ${data.details}.`);
                                 hlsInstance.destroy();
                                 break;
                         }
                     } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-                        // Show spinner for buffering/stalling
                         loadingSpinner.style.display = 'block';
                     }
                 });
@@ -566,18 +544,16 @@
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = url;
                 video.load();
-                
-                // Hide spinner on canplay event for native HLS
+
                 video.addEventListener('canplay', function() {
                     console.log('Native HLS loaded.');
                     loadingSpinner.style.display = 'none';
-                    video.muted = true;
-                    updatePlayPauseIcon();
-                    updateVolumeIcon();
-                    updateProgressBar();
+                    video.play().catch(error => {
+                        console.error('Auto-play failed:', error);
+                        loadingSpinner.style.display = 'none';
+                    });
                 }, { once: true });
 
-                // Error handling for native HLS
                 video.addEventListener('error', function(e) {
                     console.error('Native HLS error:', e);
                     loadingSpinner.style.display = 'none';
@@ -589,43 +565,46 @@
             }
         }
 
-        // Get URL parameter (initiate loading based on URL)
+        // Get URL parameter
         const urlParams = new URLSearchParams(window.location.search);
         const videoSrcFromUrl = urlParams.get('url');
 
         if (videoSrcFromUrl) {
             loadM3u8Stream(decodeURIComponent(videoSrcFromUrl));
         } else {
-            showModal('No M3U8 URL provided in the address bar. Please go back to the input page.');
+            showModal('No M3U8 URL provided in the address bar.');
+            loadingSpinner.style.display = 'none';
         }
 
-        // --- Custom Controls Logic (updated with new spinner logic) ---
-
+        // Custom Controls Logic
         playPauseButton.addEventListener('click', () => {
             if (video.paused || video.ended) {
-                // Show spinner immediately on play button click
                 loadingSpinner.style.display = 'block';
-
                 video.play().catch(error => {
                     console.error('Playback prevented:', error);
-                    // Hide spinner if there's an immediate error
                     loadingSpinner.style.display = 'none';
+                    showModal('Playback failed. Please try again or check the stream URL.');
                 });
             } else {
                 video.pause();
+                loadingSpinner.style.display = 'none';
             }
         });
 
-        // Hide the spinner once the video is actually playing
         video.addEventListener('playing', () => {
             loadingSpinner.style.display = 'none';
+            isPlaying = true;
+            updatePlayPauseIcon();
         });
 
-        // Show the spinner if the video stalls
         video.addEventListener('waiting', () => {
             loadingSpinner.style.display = 'block';
         });
-        
+
+        video.addEventListener('stalled', () => {
+            loadingSpinner.style.display = 'block';
+        });
+
         function updatePlayPauseIcon() {
             if (video.paused || video.ended) {
                 playPauseIcon.classList.remove('fa-pause');
@@ -637,6 +616,7 @@
                 isPlaying = true;
             }
         }
+
         video.addEventListener('play', updatePlayPauseIcon);
         video.addEventListener('pause', updatePlayPauseIcon);
 
@@ -648,7 +628,7 @@
                 volumeBeforeMute = video.volume;
                 video.muted = true;
             }
-            volumeSlider.value = video.volume;
+            volumeSlider.value = video.muted ? 0 : video.volume;
             updateVolumeFill();
             updateVolumeIcon();
         });
@@ -676,7 +656,7 @@
 
         function updateVolumeFill() {
             if (volumeFill) {
-                volumeFill.style.width = `${video.volume * 100}%`;
+                volumeFill.style.width = `${(video.muted ? 0 : video.volume) * 100}%`;
             }
         }
 
@@ -705,7 +685,6 @@
                     durationSpan.textContent = formatTime(duration);
                     const bufferedPercentage = (bufferedEnd / duration) * 100;
                     bufferBar.style.width = `${bufferedPercentage}%`;
-
                 } else {
                     durationSpan.textContent = 'LIVE';
                     progressBar.style.width = '100%';
