@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3U8 Livestream Player</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrolling */
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a; /* Ensure a consistent background */
+        }
+        #player-container {
+            position: relative;
+            width: 100vw; /* Take full viewport width */
+            height: 100vh; /* Take full viewport height */
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain; /* Ensures video fits within its container without cropping */
+        }
+
+        .controls-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
+            padding: 10px 20px;
+            box-sizing: border-box;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            cursor: default;
+            display: flex;
+            flex-direction: column; /* Stack progress bar and other controls */
+            justify-content: flex-end;
+        }
+        #player-container.hide-controls .controls-container {
+            opacity: 0;
+            pointer-events: none; /* Disable interaction when hidden */
+        }
+        .progress-bar-container {
+            position: absolute;
+            top: 0; /* Positioned back to top of the controls-container */
+            left: 0;
+            right: 0;
+            height: 5px;
+            background-color: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            z-index: 10; /* Ensure it's above the video layer */
+            opacity: 1; /* Default visible */
+            transition: opacity 0.3s ease; /* Add transition for smooth hide/show */
+        }
+        #player-container.hide-controls .progress-bar-container {
+            opacity: 0;
+            pointer-events: none; /* Hide and prevent interaction */
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #8b0000; /* Dark red progression bar */
+            border-radius: 2px;
+        }
+        .buffer-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.5);
+            z-index: 1; /* Below progress bar */
+        }
+        .thumb {
+            position: absolute;
+            top: 50%;
+            left: 0%; /* Will be updated by JS */
+            transform: translate(-50%, -50%);
+            width: 15px;
+            height: 15px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            display: none; /* Hidden by default, shown on hover */
+            z-index: 3;
+        }
+        .progress-bar-container:hover .thumb {
+            display: block;
+        }
+        .control-button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-button:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        .control-button:active {
+            transform: translateY(0);
+        }
+        .live-indicator {
+            background-color: #ff0000;
+            color: #fff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .live-indicator-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #fff;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .slider-wrapper {
+            position: relative;
+            width: 80px; /* Adjust as needed */
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 100%;
+            background: transparent; /* Hide default track */
+            outline: none;
+            margin: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: grab;
+            z-index: 2; /* Make it clickable */
+        }
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .volume-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: #fff;
+            border-radius: 2px;
+        }
+        /* Custom modal for messages */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #1a1a1a;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-width: 400px;
+            color: #fff;
+            text-align: center;
+            position: relative;
+        }
+        .modal-close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-close-button:hover,
+        .modal-close-button:focus {
+            color: #fff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Watermark Styles */
+        .watermark {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem; /* Base font size for 'inTV' */
+            font-weight: 600;
+            pointer-events: none; /* Allow clicks to pass through to video */
+            z-index: 50; /* Above video, below controls */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        .watermark .logo-b {
+            height: 28px; /* Increased size for circle */
+            width: 28px; /* Maintain aspect ratio */
+            background-color: #007bff; /* Blue background for the "B" */
+            border-radius: 50%; /* Circular shape */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem; /* Size of the 'B' character itself */
+            font-weight: 900; /* Extra bold for 'B' */
+            color: #fff; /* White color for 'B' */
+            margin-right: 6px; /* Reduced space between 'B' and 'inTV' */
+            box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
+            text-shadow: none; /* Remove text shadow for the 'B' to keep it clean */
+            line-height: 1; /* Helps vertical centering */
+        }
+        /* Hide watermark when controls are hidden to avoid clutter */
+        #player-container.hide-controls .watermark {
+            opacity: 0;
+        }
+
+        /* Views Count Display */
+        .views-count {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            display: flex;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+            color: #fff; /* White color for text */
+            padding: 8px 12px; /* Increased padding */
+            border-radius: 5px;
+            font-size: 1.1rem; /* Bigger font size */
+            font-weight: bold; /* Bold text */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none; /* Allow clicks to pass through */
+            z-index: 50;
+            transition: opacity 0.3s ease;
+        }
+        .views-count .fas {
+            margin-right: 8px; /* Increased margin for icon */
+            font-size: 1.6rem; /* Bigger eye icon */
+            color: #0f0; /* Green color for eye icon */
+        }
+        /* Hide views count when controls are hidden */
+        #player-container.hide-controls .views-count {
+            opacity: 0;
+        }
+
+        /* Responsive adjustments for controls padding */
+        @media (max-width: 768px) {
+            .controls-container {
+                padding: 5px 10px; /* Reduced padding for mobile */
+            }
+            .control-button {
+                padding: 6px; /* Smaller buttons on mobile */
+                font-size: 1.2rem; /* Smaller icons on mobile */
+            }
+            .text-sm {
+                font-size: 0.75rem; /* Smaller text on mobile */
+            }
+            .live-indicator {
+                padding: 3px 6px;
+                font-size: 0.7rem;
+            }
+            .watermark {
+                font-size: 1rem; /* Mobile text size for 'inTV' */
+            }
+            .watermark .logo-b {
+                height: 24px; /* Mobile size for circle */
+                width: 24px;
+                font-size: 1.2rem; /* Mobile size for 'B' character */
+                margin-right: 5px;
+            }
+            .views-count {
+                font-size: 0.9rem; /* Slightly smaller for mobile */
+                padding: 6px 10px;
+            }
+            .views-count .fas {
+                font-size: 1.3rem; /* Slightly smaller icon for mobile */
+                margin-right: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="player-container">
+        <video id="video-player" playsinline></video>
+
+        <!-- Views Count Display -->
+        <div class="views-count">
+            <i class="fas fa-eye"></i> <span id="count">0</span>
+        </div>
+
+        <!-- Watermark -->
+        <div class="watermark">
+            <span class="logo-b">B</span><span>inTV</span>
+        </div>
+
+        <!-- Progress Bar Container -->
+        <div class="progress-bar-container" id="progressBarContainer">
+            <div class="buffer-bar" id="bufferBar"></div>
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="thumb" id="progressThumb"></div>
+        </div>
+
+        <!-- Custom Controls Container -->
+        <div class="controls-container">
+            <div class="flex items-center justify-between w-full p-4"> <!-- Added padding for controls content -->
+                <!-- Left controls -->
+                <div class="flex items-center space-x-2">
+                    <button id="play-pause-button" class="control-button">
+                        <i class="fas fa-play" id="play-pause-icon"></i>
+                    </button>
+                    <button id="volume-button" class="control-button">
+                        <i class="fas fa-volume-up" id="volume-icon"></i>
+                    </button>
+                    <!-- Volume slider placeholder (hidden by default, can be shown on hover/click) -->
+                    <div class="slider-wrapper hidden group-hover:block" id="volumeSliderWrapper">
+                        <div class="volume-fill" id="volumeFill"></div>
+                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" class="volume-slider">
+                    </div>
+
+                    <span class="text-sm font-medium ml-2 text-white"><span id="current-time">0:00</span> / <span id="duration">0:00</span></span>
+                    <div class="live-indicator flex items-center ml-4">
+                        <span class="live-indicator-dot"></span>
+                        LIVE
+                    </div>
+                </div>
+
+                <!-- Right controls -->
+                <div class="flex items-center space-x-2">
+                    <!-- Hide CC and Settings buttons on small screens (mobile) -->
+                    <button id="cc-button" class="control-button opacity-70 cursor-not-allowed hidden md:flex" title="Subtitles (Not Implemented)">
+                        <i class="fas fa-closed-captioning"></i>
+                    </button>
+                    <button id="settings-button" class="control-button opacity-70 cursor-not-allowed hidden md:flex" title="Settings (Not Implemented)">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                    <button id="pip-button" class="control-button opacity-70 cursor-not-allowed" title="Picture-in-Picture (Not Implemented)">
+                        <i class="fas fa-picture-in-picture"></i>
+                    </button>
+                    <button id="fullscreen-button" class="control-button">
+                        <i class="fas fa-expand-alt" id="fullscreen-icon"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal for messages -->
+    <div id="customModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-button" id="closeModalBtn">&times;</span>
+            <p id="modalMessage"></p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <!-- Hls.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script>
+        const video = document.getElementById('video-player');
+        const playPauseButton = document.getElementById('play-pause-button');
+        const playPauseIcon = document.getElementById('play-pause-icon');
+        const volumeButton = document.getElementById('volume-button');
+        const volumeIcon = document.getElementById('volume-icon');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeFill = document.getElementById('volumeFill');
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        const progressBar = document.getElementById('progressBar');
+        const bufferBar = document.getElementById('bufferBar');
+        const progressThumb = document.getElementById('progressThumb');
+        const currentTimeSpan = document.getElementById('current-time');
+        const durationSpan = document.getElementById('duration');
+        const fullscreenButton = document.getElementById('fullscreen-button');
+        const fullscreenIcon = document.getElementById('fullscreen-icon');
+        const controlsContainer = document.querySelector('.controls-container');
+        const playerContainer = document.getElementById('player-container');
+        const liveViewersSpan = document.getElementById('liveViewers');
+
+        const customModal = document.getElementById('customModal');
+        const modalMessage = document.getElementById('modalMessage');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+
+        let isPlaying = false;
+        let isFullscreen = false;
+        let volumeBeforeMute = video.volume;
+        let hlsInstance;
+        let controlsTimeout;
+
+        // Firebase Initialization
+        const firebaseConfig = {
+            apiKey: "AIzaSyClK3VctCd-Q1EV1Y3-TzSaeeb18rQPthc",
+            authDomain: "bintv-a01de.firebaseapp.com",
+            projectId: "bintv-a01de",
+            storageBucket: "bintv-a01de.firebasestorage.app",
+            messagingSenderId: "220818284192",
+            appId: "1:220818284192:web:b5975f2e6a7121c79773c5",
+            measurementId: "G-YZ5ZQEM6YB"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const viewersRef = db.ref("live_viewers");
+
+        // Generate a unique viewer ID
+        const viewerId = Math.random().toString(36).substring(2);
+
+        // Presence system: Set viewer online status and remove on disconnect
+        const connectedRef = db.ref(".info/connected");
+        connectedRef.on("value", (snap) => {
+            if (snap.val() === true) {
+                const ref = viewersRef.child(viewerId);
+                ref.set(true);
+                ref.onDisconnect().remove();
+            }
+        });
+
+        // Listen for changes in the total number of viewers
+        viewersRef.on("value", (snap) => {
+            const count = snap.numChildren();
+            // Update the span with ID 'liveViewers' with just the count
+            liveViewersSpan.textContent = count;
+        });
+
+
+        // Function to show custom modal messages instead of alert()
+        function showModal(message) {
+            modalMessage.textContent = message;
+            customModal.style.display = 'flex';
+        }
+
+        closeModalBtn.onclick = function() {
+            customModal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == customModal) {
+                customModal.style.display = 'none';
+            }
+        }
+
+        // Function to load the M3u8 stream
+        function loadM3u8Stream(url) {
+            if (!url) {
+                showModal('No M3U8 URL provided. Please go back and enter one.');
+                return;
+            }
+
+            // Destroy existing HLS instance if it exists
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                console.log('Existing HLS instance destroyed.');
+            }
+
+            video.removeAttribute('src'); // Clear current src
+            video.style.display = 'block'; // Ensure video element is visible
+
+            if (Hls.isSupported()) {
+                hlsInstance = new Hls({
+                    liveSyncDurationCount: 3,
+                    liveMaxBufferLength: 30,
+                    lowLatencyMode: true,
+                });
+                hlsInstance.loadSource(url);
+                hlsInstance.attachMedia(video);
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+                    console.log('HLS manifest parsed. Video is ready.');
+                    // Video is now ready, but we explicitly keep it paused and muted
+                    video.pause();
+                    video.muted = true;
+                    updatePlayPauseIcon();
+                    updateVolumeIcon();
+                    updateProgressBar();
+                });
+                // Modified Error Handling: Suppress modals for common buffering errors
+                hlsInstance.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.error('Fatal network error encountered, trying to recover (buffering):', data.details);
+                                // Don't show modal for network errors that HLS.js might recover from
+                                hlsInstance.recoverMediaError();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.error('Fatal media error encountered, trying to recover (buffering):', data.details);
+                                // Don't show modal for media errors that HLS.js might recover from
+                                hlsInstance.recoverMediaError();
+                                break;
+                            default:
+                                console.error('Fatal error encountered, cannot recover:', data);
+                                showModal(`An unrecoverable error occurred: ${data.details}. Cannot play this stream.`);
+                                hlsInstance.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.load();
+                video.addEventListener('loadedmetadata', function() {
+                    console.log('Native HLS loaded.');
+                    // Video is now ready, but we explicitly keep it paused and muted
+                    video.pause();
+                    video.muted = true;
+                    updatePlayPauseIcon();
+                    updateVolumeIcon();
+                    updateProgressBar();
+                }, { once: true });
+                video.addEventListener('error', function(e) {
+                    console.error('Native HLS error:', e);
+                    showModal('Error loading video. Your browser might not support this stream directly, or the URL is invalid.');
+                }, { once: true });
+            } else {
+                showModal('Your browser does not support HLS video playback.');
+            }
+        }
+
+        // Get URL parameter (initiate loading based on URL)
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoSrcFromUrl = urlParams.get('url');
+
+        if (videoSrcFromUrl) {
+            loadM3u8Stream(decodeURIComponent(videoSrcFromUrl));
+        } else {
+            showModal('No M3U8 URL provided in the address bar. Please go back to the input page.');
+        }
+
+        // --- Custom Controls Logic ---
+
+        // Play/Pause
+        playPauseButton.addEventListener('click', () => {
+            if (video.paused || video.ended) {
+                video.play().catch(error => { console.error('Playback prevented:', error); });
+            } else {
+                video.pause();
+            }
+        });
+
+        function updatePlayPauseIcon() {
+            if (video.paused || video.ended) {
+                playPauseIcon.classList.remove('fa-pause');
+                playPauseIcon.classList.add('fa-play');
+                isPlaying = false;
+            } else {
+                playPauseIcon.classList.remove('fa-play');
+                playPauseIcon.classList.add('fa-pause');
+                isPlaying = true;
+            }
+        }
+        video.addEventListener('play', updatePlayPauseIcon);
+        video.addEventListener('pause', updatePlayPauseIcon);
+
+        // Volume control
+        volumeButton.addEventListener('click', () => {
+            if (video.muted) {
+                video.muted = false;
+                video.volume = volumeBeforeMute > 0 ? volumeBeforeMute : 0.5; // Restore previous volume or default to 0.5
+            } else {
+                volumeBeforeMute = video.volume; // Save current volume before muting
+                video.muted = true;
+            }
+            volumeSlider.value = video.volume;
+            updateVolumeFill();
+            updateVolumeIcon();
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            const newVolume = parseFloat(volumeSlider.value);
+            video.volume = newVolume;
+            video.muted = newVolume === 0; // Mute if slider is at 0
+            updateVolumeIcon();
+            updateVolumeFill();
+        });
+
+        function updateVolumeIcon() {
+            if (video.muted || video.volume === 0) {
+                volumeIcon.classList.remove('fa-volume-up', 'fa-volume-down', 'fa-volume-off');
+                volumeIcon.classList.add('fa-volume-mute');
+            } else if (video.volume > 0.5) {
+                volumeIcon.classList.remove('fa-volume-mute', 'fa-volume-down', 'fa-volume-off');
+                volumeIcon.classList.add('fa-volume-up');
+            } else if (video.volume > 0) {
+                volumeIcon.classList.remove('fa-volume-mute', 'fa-volume-up', 'fa-volume-off');
+                volumeIcon.classList.add('fa-volume-down');
+            } else { // Should be covered by muted or volume === 0, but as a fallback
+                volumeIcon.classList.remove('fa-volume-mute', 'fa-volume-up', 'fa-volume-down');
+                volumeIcon.classList.add('fa-volume-off');
+            }
+        }
+
+        function updateVolumeFill() {
+            if (volumeFill) { // Ensure volumeFill exists before accessing style
+                volumeFill.style.width = `${video.volume * 100}%`;
+            }
+        }
+
+        // Initialize volume and mute state
+        volumeBeforeMute = 1; // Default to full volume before muting
+        video.volume = 1;
+        video.muted = true;
+        updateVolumeIcon();
+        updateVolumeFill();
+        updatePlayPauseIcon(); // Ensure play icon is visible on load
+
+        video.addEventListener('timeupdate', updateProgressBar);
+        video.addEventListener('progress', updateProgressBar);
+
+        function updateProgressBar() {
+            if (video.buffered.length > 0) {
+                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                const duration = video.duration || Infinity;
+                const currentTime = video.currentTime;
+                const formattedCurrentTime = formatTime(currentTime);
+                currentTimeSpan.textContent = formattedCurrentTime;
+
+                if (isFinite(video.duration)) {
+                    const progressPercentage = (currentTime / duration) * 100;
+                    progressBar.style.width = `${progressPercentage}%`;
+                    progressThumb.style.left = `${progressPercentage}%`;
+                    durationSpan.textContent = formatTime(duration);
+                    const bufferedPercentage = (bufferedEnd / duration) * 100;
+                    bufferBar.style.width = `${bufferedPercentage}%`;
+
+                } else {
+                    durationSpan.textContent = 'LIVE';
+                    progressBar.style.width = '100%'; // For live, assume full bar is "current"
+                    progressThumb.style.left = '100%';
+                    bufferBar.style.width = '100%';
+                    // No seeking for live HLS streams via progress bar
+                }
+            } else {
+                bufferBar.style.width = '0%';
+                progressBar.style.width = '0%';
+                progressThumb.style.left = '0%';
+                currentTimeSpan.textContent = '0:00';
+                durationSpan.textContent = '0:00';
+            }
+        }
+
+        function formatTime(seconds) {
+            const date = new Date(null);
+            date.setSeconds(seconds);
+            const isOverHour = seconds >= 3600;
+            const utc = date.toISOString().substr(11, 8);
+            if (!isOverHour && utc.startsWith('00:')) {
+                return utc.substr(3);
+            }
+            return utc;
+        }
+
+        // --- Fullscreen Logic ---
+        fullscreenButton.addEventListener('click', () => {
+            if (!isFullscreen) {
+                // Ensure controls are visible when trying to enter fullscreen
+                clearTimeout(controlsTimeout);
+                playerContainer.classList.remove('hide-controls');
+
+                // Prioritize webkitEnterFullscreen for iOS video element
+                if (video.webkitEnterFullscreen) {
+                    video.webkitEnterFullscreen();
+                } else if (video.requestFullscreen) {
+                    video.requestFullscreen();
+                } else if (video.mozRequestFullScreen) {
+                    video.mozRequestFullScreen();
+                } else if (video.webkitRequestFullscreen) {
+                    video.webkitRequestFullscreen();
+                } else if (video.msRequestFullscreen) {
+                    video.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen from the document
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        });
+
+        // Fullscreen change listener to update UI and controls visibility
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange); // Note the capital 'S'
+
+        function handleFullscreenChange() {
+            // Determine if currently in fullscreen based on various browser prefixes
+            isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+            updateFullscreenIcon();
+
+            // When entering or exiting fullscreen, ensure controls are initially visible
+            clearTimeout(controlsTimeout);
+            playerContainer.classList.remove('hide-controls');
+
+            // Re-establish timeout for controls to hide after inactivity if playback is active
+            if (isPlaying) {
+                controlsTimeout = setTimeout(() => {
+                    playerContainer.classList.add('hide-controls');
+                }, 3000);
+            }
+        }
+
+        function updateFullscreenIcon() {
+            if (isFullscreen) {
+                fullscreenIcon.classList.remove('fa-expand-alt');
+                fullscreenIcon.classList.add('fa-compress-alt');
+            } else {
+                fullscreenIcon.classList.remove('fa-compress-alt');
+                fullscreenIcon.classList.add('fa-expand-alt');
+            }
+        }
+
+        // Hide controls on inactivity
+        playerContainer.addEventListener('mousemove', () => {
+            clearTimeout(controlsTimeout);
+            playerContainer.classList.remove('hide-controls');
+            controlsTimeout = setTimeout(() => {
+                if (isPlaying && !video.paused) {
+                    playerContainer.classList.add('hide-controls');
+                }
+            }, 3000);
+        });
+
+        playerContainer.addEventListener('mouseleave', () => {
+            clearTimeout(controlsTimeout);
+            if (isPlaying && !video.paused) {
+                playerContainer.classList.add('hide-controls');
+            }
+        });
+
+        // Show controls on hover over player (even if hidden)
+        playerContainer.addEventListener('mouseenter', () => {
+            clearTimeout(controlsTimeout);
+            playerContainer.classList.remove('hide-controls');
+        });
+
+        // Initial controls state (visible) on load
+        playerContainer.classList.remove('hide-controls');
+
+        // Prevent controls from hiding if hovering over them (e.g., when trying to use slider)
+        controlsContainer.addEventListener('mouseenter', () => {
+            clearTimeout(controlsTimeout);
+            playerContainer.classList.remove('hide-controls');
+        });
+
+        // Click video to play/pause
+        video.addEventListener('click', () => {
+            playPauseButton.click();
+        });
+
+        // Click outside modal to close
+        window.addEventListener('click', (event) => {
+            if (event.target === customModal) {
+                customModal.style.display = 'none';
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                playPauseButton.click();
+            } else if (e.code === 'KeyF') {
+                fullscreenButton.click();
+            } else if (e.code === 'KeyM') {
+                volumeButton.click();
+            } else if (e.code === 'ArrowRight') {
+                if (isFinite(video.duration)) video.currentTime += 5;
+            } else if (e.code === 'ArrowLeft') {
+                if (isFinite(video.duration)) video.currentTime -= 5;
+            }
+        });
+    </script>
+  <script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const id = 'liveviewerofbintvplayer';
+        const viewerCountElement = document.getElementById('count');
+
+        // Initialize socket with stream ID
+        const socket = io('wss://96-4.jdx3.org', {
+            query: {
+                id
+            }
+        });
+
+        // Listen for viewer count updates
+        socket.on('updateViewCount', (data) => {
+            if (data.id === id) { // Ensure the update is for this specific id
+                viewerCountElement.textContent = data.viewCount;
+            }
+        });
+    </script>
+  </script>
+</body>
+</html>
