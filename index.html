@@ -3,744 +3,1366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M3U8 Livestream Player</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <title>Media Player</title>
+
+    <!-- JW Player library -->
+    <script src="https://content.jwplatform.com/libraries/KB5zFt7A.js"></script>
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.3/jquery.min.js"></script>
+    <!-- P2P Media Loader Core -->
+    <script src="p2p-core-single.js"></script>
+    <!-- P2P Media Loader HLS.js Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/p2p-media-loader-hlsjs@latest/build/p2p-media-loader-hlsjs.min.js"></script>
+    <!-- JWPlayer Hlsjs Provider -->
+    <script src="https://cdn.jsdelivr.net/npm/@hola.org/jwplayer-hlsjs@latest/dist/jwplayer.hlsjs.min.js"></script>
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@0.14.17"></script>
+    <!-- Day.js -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+    <!-- Custom CSS -->
+    <link href="https://res.cloudinary.com/do1zdkwaj/raw/upload/v1704087632/SUB/neflex_uoodhg.css" rel="stylesheet">
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-VKQHQ602MX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() {
+            dataLayer.push(arguments);
+        }
+        gtag('js', new Date());
+        gtag('config', 'G-VKQHQ602MX');
+    </script>
+   
     <style>
-        html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #0a0a0a;
-        }
-        #player-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background-color: #000;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        video {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: cover;
-        }
-        .controls-container {
+        /* Your existing CSS */
+        .clossalert {
+            padding: 0 4px;
             position: absolute;
+            right: 8px;
+        }
+
+        .share_channell {
+            display: none;
+            position: absolute;
+            top: 0;
+            z-index: 9;
+            left: 0;
+            border-radius: 0;
+            background: #1c273391;
+            right: -10px;
             bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0) 100%);
-            padding: 10px 20px;
-            box-sizing: border-box;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-            cursor: default;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-        #player-container.hide-controls .controls-container {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .progress-bar-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background-color: rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            z-index: 10;
-            opacity: 1;
-            transition: opacity 0.3s ease;
-        }
-        #player-container.hide-controls .progress-bar-container {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background-color: #8b0000;
-            border-radius: 2px;
-        }
-        .buffer-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.5);
-            z-index: 1;
-        }
-        .thumb {
-            position: absolute;
-            top: 50%;
-            left: 0%;
-            transform: translate(-50%, -50%);
-            width: 15px;
-            height: 15px;
-            background-color: #ff0000;
-            border-radius: 50%;
-            display: none;
-            z-index: 3;
-        }
-        .progress-bar-container:hover .thumb {
-            display: block;
-        }
-        .control-button {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 4px;
-            transition: background-color 0.2s ease, transform 0.1s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .control-button:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-1px);
-        }
-        .control-button:active {
-            transform: translateY(0);
-        }
-        .live-indicator {
-            background-color: #ff0000;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-        .live-indicator-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background-color: #fff;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        .slider-wrapper {
-            position: relative;
-            width: 80px;
-            height: 4px;
-            background-color: rgba(255, 255, 255, 0.3);
-            border-radius: 2px;
-            cursor: pointer;
-        }
-        .volume-slider {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            outline: none;
-            margin: 0;
-            position: absolute;
-            top: 0;
-            left: 0;
-            cursor: grab;
-            z-index: 2;
-        }
-        .volume-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: grab;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        }
-        .volume-slider::-moz-range-thumb {
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: grab;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        }
-        .volume-fill {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background-color: #fff;
-            border-radius: 2px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6);
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: #1a1a1a;
-            margin: auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            max-width: 400px;
-            color: #fff;
+            height: 100vh;
             text-align: center;
-            position: relative;
         }
-        .modal-close-button {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .modal-close-button:hover,
-        .modal-close-button:focus {
-            color: #fff;
-            text-decoration: none;
-            cursor: pointer;
-        }
-        .watermark {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            display: flex;
-            align-items: center;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1.1rem;
-            font-weight: 600;
-            pointer-events: none;
-            z-index: 50;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
-            opacity: 0.8;
-            transition: opacity 0.3s ease;
-        }
-        .watermark .logo-b {
-            height: 28px;
-            width: 28px;
-            background-color: #007bff;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.4rem;
-            font-weight: 900;
-            color: #fff;
-            margin-right: 6px;
-            box-shadow: 1px 1px 4px rgba(0,0,0,0.4);
-            text-shadow: none;
-            line-height: 1;
-        }
-        #player-container.hide-controls .watermark {
-            opacity: 0;
-        }
-        @media (max-width: 768px) {
-            .controls-container {
-                padding: 5px 10px;
-            }
-            .control-button {
-                padding: 6px;
-                font-size: 1.2rem;
-            }
-            .text-sm {
-                font-size: 0.75rem;
-            }
-            .live-indicator {
-                padding: 3px 6px;
-                font-size: 0.7rem;
-            }
-            .watermark {
-                font-size: 1rem;
-            }
-            .watermark .logo-b {
-                height: 24px;
-                width: 24px;
-                font-size: 1.2rem;
-                margin-right: 5px;
-            }
-            video {
-                object-fit: cover;
-            }
-        }
-        .loading-spinner {
-            display: none;
+
+        .share-channel {
             position: absolute;
             top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 6px solid rgba(255, 255, 255, 0.2);
-            border-top: 6px solid #ff0000;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 0.8s linear infinite;
-            z-index: 100;
+            right: 0;
+            left: 0;
+            margin-top: -50px;
         }
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
+
+        .share-channel_title {
+            text-align: center;
+            color: #fff;
+            font-size: 21px;
+        }
+
+        .share-channel_title * {
+            color: #fff;
+        }
+
+        .custom-btn {
+            background: #931800;
+            border: 0;
+            font-size: 16px;
+            padding: 5px 16px;
+            border-radius: 5px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            display: table;
+            margin: 4px auto 0;
+        }
+
+        .share-channel textarea {
+            margin-top: 13px;
+            max-width: 98%;
+            width: 600px;
+            direction: ltr;
+            overflow: auto;
+            font-size: 14px;
+            padding: 5px;
+            background: rgba(255, 255, 255, .26);
+            border: 0;
+            height: 54px;
+            color: #fff;
+        }
+
+        button.GetCode,
+        button.Reload {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            padding: 2px 10px;
+            background: #931800;
+            color: #fff;
+            border: 0;
+            outline: 0;
+            font-size: 15px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        button.GetCode {
+            right: 10px!important;
+            left: auto;
+        }
+
+        .share_channell.Open {
+            display: block!important;
+        }
+
+        .PostTop,
+        .TOPfooter,
+        .UP,
+        .labels,
+        .post-share,
+        div#Shareit,
+        footer,
+        header {
+            display: none;
+        }
+
+        .CodeChannle,
+        div#my-video {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            bottom: 0;
+        }
+
+        body {
+            background: #000;
+        }
+
+        body.singleItem main#main article.Item .PostContent {
+            overflow: hidden;
+            background: #000;
+            border-radius: 10px;
+            padding: 5px;
+            box-shadow: 0 1px 7px #000;
+            border: 1px solid #000;
+        }
+
+        * {
+            border: 0 solid!important;
+            text-decoration: none;
+        }
+
+        #StingPlayerPSL {
+            height: 100%!important;
+        }
+
+        @media screen and (max-width: 680px) {
+            button.GetCode,
+            button.Reload {
+                padding: 2px 5px;
+                font-size: 14px;
+            }
+
+            .custom-btn {
+                font-size: 13px;
+            }
+
+            .share-channel textarea {
+                margin-top: 10px;
+                max-width: 75%;
+                width: 540px;
+            }
+
+            div#my-video:before {
+                font-size: 13px!important;
+            }
+        }
+      /*
+
+Skin Netflix v2.0.5
+Created by: Gabriel Almeida
+Buy Me a Coffee: https://bit.ly/3NlkAGU
+
+Ocean Skin For JW Player8
+https://bit.ly/3kVPdo9
+
+changelog:
+  v2.0.7
+  Fix - JWPlayer 8.27.1
+
+  v2.0.6
+  Added - Forward 10 Seconds
+
+  v2.0.5
+  New - Netflix Buffer .jw-svg-icon-buffer
+  New - Background Color .jw-tooltip-sharing
+  New - Background Color .jw-tooltip-audioTracks
+  New - SVG Icon .jw-svg-icon-audio-tracks
+  New - SVG Icon .jw-svg-icon-pip-on
+  New - SVG Icon .jw-svg-icon-pip-off
+  Added - ADBlock Modal
+  Test - JWPlayer8 JavaScript API
+*/
+
+@import url("https://fonts.googleapis.com/css2?family=Rubik:wght@500;700&display=swap");
+:root {
+  --bg-red: #e50914;
+  --bg-white: #f7f7f7;
+  --bg-black: #181919;
+}
+/* RESET CSS */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: inherit;
+}
+
+html {
+  box-sizing: border-box;
+  font-size: 62.5%;
+}
+
+/* ADBlock Modal */
+.modal {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  z-index: 999;
+  font-family: "Rubik", Arial, sans-serif;
+}
+
+.modal .modal-container {
+  width: 60rem;
+  padding-bottom: 10rem;
+  background-color: var(--bg-black);
+  color: var(--bg-white);
+  border-radius: 0.3rem;
+}
+
+.modal .modal-container .modal-header {
+  position: relative;
+  border-radius: 0.3rem;
+  height: 30rem;
+}
+
+.modal .modal-container .modal-header strong {
+  position: absolute;
+  text-align: center;
+  top: 12rem;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-weight: 700;
+  font-size: 2rem;
+  color: var(--bg-white);
+}
+
+.modal .modal-container .modal-header::before {
+  top: 0;
+  left: 0;
+  content: "";
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  background: linear-gradient(
+    0deg,
+    var(--bg-black),
+    rgba(24, 25, 25, 0.3) 150%
+  );
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+
+.modal .modal-container .modal-header::after {
+  top: 0;
+  left: 0;
+  content: "";
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  background: linear-gradient(
+    0deg,
+    var(--bg-black),
+    rgba(24, 25, 25, 0.3) 100%
+  );
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+
+.modal .modal-container .modal-header .backdrop {
+  width: 100%;
+  height: 30rem;
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+
+.modal .modal-container .modal-header button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 3.6rem;
+  height: 3.6rem;
+  background: var(--bg-black);
+  border: 0;
+  border-radius: 100%;
+  cursor: pointer;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 999;
+}
+
+.modal .modal-container .modal-header button:hover {
+  opacity: 0.75;
+}
+
+.modal .modal-container .modal-header button img {
+  display: block;
+  width: 2.7rem;
+}
+
+.modal .modal-container .modal-body {
+  max-width: 50rem;
+  margin: 0 auto;
+  border-radius: 0 0 0.3rem 0.3rem;
+}
+
+.modal .modal-container .modal-body span {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.7rem;
+}
+
+/* Skin Netflix CSS */
+.jwplayer.jw-skin-netflix .jw-title-primary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  color: var(--bg-white);
+  margin: 5rem 0 0 5rem;
+  font-family: "Rubik", Arial, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.jwplayer.jw-skin-netflix .jw-title-secondary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  color: var(--bg-white);
+  margin: -6rem 0 0 5rem;
+  font-family: "Rubik", Arial, sans-serif;
+  font-weight: 500;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-1 .jw-title-primary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-0 .jw-title-primary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: 3rem 0 0 2.5rem;
+  font-size: 1.2rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-1 .jw-title-secondary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-0 .jw-title-secondary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: -2.6rem 0 0 2.5rem;
+  font-size: 0.8rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-3 .jw-title-primary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-2 .jw-title-primary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: 4rem 0 0 2.5rem;
+  font-size: 2rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-3 .jw-title-secondary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-2 .jw-title-secondary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: -5rem 0 0 2.5rem;
+  font-size: 1.5rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-5 .jw-title-primary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-4 .jw-title-primary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: 5rem 0 0 2.5rem;
+  font-size: 2.5rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-5 .jw-title-secondary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-4 .jw-title-secondary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: -6rem 0 0 2.5rem;
+  font-size: 1.5rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-7 .jw-title-primary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-6 .jw-title-primary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: 5rem 0 0 2.5rem;
+  font-size: 3rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-7 .jw-title-secondary,
+.jwplayer.jw-skin-netflix.jw-breakpoint-6 .jw-title-secondary {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  margin: -7rem 0 0 2.5rem;
+  font-size: 2rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle
+  .jw-display-icon-container
+  .jw-svg-icon-play
+  path {
+  display: none;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle
+  .jw-display-icon-container
+  .jw-svg-icon-play {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTE5LjM3NiAxMi40MTZMOC43NzcgMTkuNDgyQS41LjUgMCAwIDEgOCAxOS4wNjZWNC45MzRhLjUuNSAwIDAgMSAuNzc3LS40MTZsMTAuNTk5IDcuMDY2YS41LjUgMCAwIDEgMCAuODMyeiIgZmlsbD0icmdiYSgyNDcsMjQ2LDI0NywxKSIvPjwvc3ZnPg==");
+  background-repeat: no-repeat;
+  background-position: center;
+  -webkit-transition: 0.2s;
+  transition: 0.2s;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle
+  .jw-display-icon-container:hover
+  .jw-svg-icon-play {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTE5LjM3NiAxMi40MTZMOC43NzcgMTkuNDgyQS41LjUgMCAwIDEgOCAxOS4wNjZWNC45MzRhLjUuNSAwIDAgMSAuNzc3LS40MTZsMTAuNTk5IDcuMDY2YS41LjUgMCAwIDEgMCAuODMyeiIgZmlsbD0icmdiYSgyMjksOSwyMCwxKSIvPjwvc3ZnPg==");
+  background-repeat: no-repeat;
+  background-position: center;
+  -webkit-transition: 0.2s;
+  transition: 0.2s;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle
+  .jw-display-icon-container
+  .jw-svg-icon-play {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 100%;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle
+  .jw-display-controls
+  .jw-display-icon-container
+  .jw-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle .jw-preview,
+.jwplayer.jw-skin-netflix.jw-state-complete .jw-preview {
+  width: calc(100% + 5rem);
+  background-size: calc(100% + 6rem);
+  -webkit-transition: opacity 0.35s, -webkit-transform 0.35s;
+  transition: opacity 0.35s, -webkit-transform 0.35s;
+  transition: opacity 0.35s, transform 0.35s;
+  transition: opacity 0.35s, transform 0.35s, -webkit-transform 0.35s;
+  -webkit-transform: translate3d(-4rem, 0, 0);
+  transform: translate3d(-4rem, 0, 0);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-idle:hover .jw-preview,
+.jwplayer.jw-skin-netflix.jw-state-complete:hover .jw-preview {
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+}
+
+.jwplayer.jw-skin-netflix.jw-state-paused .jw-title {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  justify-content: flex-start;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+}
+
+.jwplayer.jw-skin-netflix.jw-state-paused .jw-controls,
+.jwplayer.jw-skin-netflix.jw-state-complete .jw-controls,
+.jwplayer.jw-skin-netflix.jw-state-buffering .jw-controls {
+  background-color: rgba(0, 0, 0, 0.35);
+  transition: all 0.2s linear;
+  -o-transition: all 0.2s linear;
+  -moz-transition: all 0.2s linear;
+  -webkit-transition: all 0.2s linear;
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-display-controls
+  .jw-display-icon-container
+  .jw-icon:hover {
+  color: var(--bg-red);
+}
+
+/*
+Amplia a imagem e adiciona transições.
+*/
+.jwplayer.jw-skin-netflix .jw-preview {
+  width: calc(100% + 5rem);
+  background-size: calc(100% + 6rem);
+  transition: opacity 0.35s, transform 0.35s;
+  transform: translate3d(-4rem, 0, 0);
+}
+
+.jwplayer.jw-skin-netflix:hover .jw-preview {
+  transform: translate3d(0, 0, 0);
+}
+
+/*
+Deslizar a imagem em -4rem.
+*/
+.jwplayer.jw-skin-netflix.jw-state-complete:hover .jw-preview {
+  transform: translate3d(-4rem, 0, 0);
+}
+
+/*
+Mudar a cor da barra de controle e alterar a cor do ícone em idle.
+*/
+.jwplayer.jw-skin-netflix .jw-display {
+  padding-bottom: 4.5rem;
+}
+
+.jwplayer.jw-skin-netflix .jw-controls::after {
+  background: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-controlbar .jw-button-container .jw-button-color {
+  color: var(--bg-white);
+}
+
+.jwplayer.jw-skin-netflix.jw-state-paused
+  .jw-controlbar
+  .jw-button-container
+  .jw-button-color {
+  color: var(--bg-white);
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-controlbar
+  .jw-button-container
+  .jw-button-color:hover {
+  color: var(--bg-red);
+}
+
+/*
+Toltips mais perto da barra, alterar cores e remover sombras.
+*/
+.jwplayer.jw-skin-netflix .jw-controlbar .jw-tooltip {
+  box-shadow: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-controlbar .jw-tooltip.jw-open {
+  border-radius: 0.3rem;
+  color: var(--bg-black);
+}
+
+.jwplayer.jw-skin-netflix .jw-controlbar .jw-tooltip .jw-text {
+  background-color: var(--bg-black);
+  border-radius: 0.3rem;
+}
+
+.jwplayer.jw-skin-netflix .jw-controlbar .jw-text {
+  color: var(--bg-white);
+}
+
+.jwplayer.jw-skin-netflix .jw-time-tip .jw-text {
+  color: var(--bg-black);
+}
+
+.jwplayer.jw-skin-netflix .jw-volume-tip {
+  margin-bottom: -4rem;
+}
+
+/*
+Tooltip timeslider e botões de qualidade e legenda.
+*/
+.jwplayer.jw-skin-netflix .jw-settings-topbar-buttons .jw-tooltip-captions,
+.jwplayer.jw-skin-netflix .jw-settings-topbar-buttons .jw-tooltip-quality,
+.jwplayer.jw-skin-netflix .jw-settings-topbar-buttons .jw-tooltip-audioTracks,
+.jwplayer.jw-skin-netflix .jw-settings-topbar-buttons .jw-tooltip-sharing {
+  color: var(--bg-black);
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-settings-topbar-buttons
+  .jw-tooltip-captions
+  .jw-text,
+.jwplayer.jw-skin-netflix
+  .jw-settings-topbar-buttons
+  .jw-tooltip-quality
+  .jw-text,
+.jwplayer.jw-skin-netflix
+  .jw-settings-topbar-buttons
+  .jw-tooltip-audioTracks
+  .jw-text,
+.jwplayer.jw-skin-netflix
+  .jw-settings-topbar-buttons
+  .jw-tooltip-sharing
+  .jw-text
+/* .jwplayer.jw-skin-netflix .jw-time-tip .jw-reset */ {
+  border-radius: 0.3rem;
+  background-color: var(--bg-black);
+  color: var(--bg-white);
+}
+
+.jwplayer.jw-skin-netflix .jw-time-thumb {
+  border-radius: 0.3rem 0.3rem 0 0 !important;
+}
+
+.jwplayer.jw-skin-netflix .jw-time-tip .jw-reset {
+  border-radius: 0 0 0.3rem 0.3rem;
+  background-color: var(--bg-black);
+  color: var(--bg-white);
+}
+
+.jwplayer.jw-skin-netflix .jw-time-tip {
+  color: var(--bg-black);
+}
+
+/* 
+Tooltip copia
+*/
+.jwplayer.jw-skin-netflix .jw-settings-submenu-items .jw-tooltip-sharing-Link {
+  color: var(--bg-black);
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-settings-submenu-items
+  .jw-tooltip-sharing-Link
+  .jw-text {
+  color: var(--bg-white);
+  background-color: var(--bg-black);
+}
+
+/*
+Controle de volume.
+*/
+.jwplayer.jw-skin-netflix
+  .jw-overlay
+  .jw-slider-volume
+  .jw-slider-container
+  .jw-knob {
+  background-color: var(--bg-red);
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-overlay
+  .jw-slider-volume
+  .jw-slider-container
+  .jw-buffer,
+.jwplayer.jw-skin-netflix
+  .jw-overlay
+  .jw-slider-volume
+  .jw-slider-container
+  .jw-rail {
+  background-color: var(--bg-black);
+  width: 0.2rem;
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-overlay
+  .jw-slider-volume
+  .jw-slider-container
+  .jw-progress {
+  background-color: var(--bg-red);
+  width: 0.2rem;
+}
+
+/*
+Tamanho e cor da slider.
+*/
+.jwplayer.jw-skin-netflix
+  .jw-controlbar
+  .jw-slider-time
+  .jw-slider-container
+  .jw-rail {
+  background-color: var(--bg-black);
+}
+.jwplayer.jw-skin-netflix
+  .jw-controlbar
+  .jw-slider-time
+  .jw-slider-container
+  .jw-buffer {
+  background-color: #222323;
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-controlbar
+  .jw-slider-time
+  .jw-slider-container
+  .jw-knob,
+.jwplayer.jw-skin-netflix
+  .jw-controlbar
+  .jw-slider-time
+  .jw-slider-container
+  .jw-progress {
+  background-color: var(--bg-red);
+}
+
+.jw-skin-netflix .jw-slider-horizontal .jw-rail,
+.jw-skin-netflix .jw-slider-horizontal .jw-buffer,
+.jw-skin-netflix .jw-slider-horizontal .jw-progress {
+  height: 0.3rem;
+}
+
+/*
+Cor do menu de configurações.
+*/
+.jwplayer.jw-skin-netflix .jw-settings-menu {
+  background-color: var(--bg-black);
+  border-radius: 0.3rem;
+  width: 23rem;
+}
+
+.jwplayer.jw-skin-netflix .jw-settings-topbar {
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+
+.jwplayer.jw-skin-netflix
+  .jw-settings-menu
+  .jw-settings-topbar:not(.jw-nested-menu-open)
+  .jw-icon-inline {
+  height: 5rem;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-7 .jw-settings-menu {
+  margin: 0 -4.4rem -4.7rem 0;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-6 .jw-settings-menu,
+.jwplayer.jw-skin-netflix.jw-breakpoint-5 .jw-settings-menu,
+.jwplayer.jw-skin-netflix.jw-breakpoint-4 .jw-settings-menu,
+.jwplayer.jw-skin-netflix.jw-breakpoint-3 .jw-settings-menu,
+.jwplayer.jw-skin-netflix.jw-breakpoint-2 .jw-settings-menu {
+  margin: 0 0.4rem 0.8rem 0;
+}
+
+.jwplayer.jw-skin-netflix.jw-breakpoint-1 .jw-settings-menu,
+.jwplayer.jw-skin-netflix.jw-breakpoint-0 .jw-settings-menu {
+  width: 100%;
+  border-radius: 0;
+}
+
+/*
+Ícone Taxas de Reprodução e configurações de legendas.
+*/
+
+.jw-svg-icon-playback-rate path {
+  color: var(--bg-white);
+}
+
+.jwplayer.jw-skin-netflix .jw-settings-menu .jw-submenu-topbar {
+  display: none;
+}
+
+/*
+Player responsivo jw8.
+*/
+.jwplayer.jw-skin-netflix.jw-breakpoint-6 .jw-volume-tip,
+.jwplayer.jw-skin-netflix.jw-breakpoint-5 .jw-volume-tip,
+.jwplayer.jw-skin-netflix.jw-breakpoint-4 .jw-volume-tip,
+.jwplayer.jw-skin-netflix.jw-breakpoint-3 .jw-volume-tip,
+.jwplayer.jw-skin-netflix.jw-breakpoint-2 .jw-volume-tip,
+.jwplayer.jw-skin-netflix.jw-breakpoint-1 .jw-volume-tip,
+.jwplayer.jw-skin-netflix.jw-breakpoint-0 .jw-volume-tip {
+  margin-bottom: -2rem;
+}
+
+/*
+Animações do botão.
+ */
+@keyframes scaling {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.1);
+  }
+}
+
+/*
+ícones do player.
+ */
+.jw-svg-icon-buffer {
+  color: var(--bg-red);
+}
+
+/*
+ícone de Play
+ */
+.jw-state-paused .jw-svg-icon-play path {
+  display: none;
+}
+
+.jw-state-paused .jw-svg-icon-play {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTE5LjM3NiAxMi40MTZMOC43NzcgMTkuNDgyQS41LjUgMCAwIDEgOCAxOS4wNjZWNC45MzRhLjUuNSAwIDAgMSAuNzc3LS40MTZsMTAuNTk5IDcuMDY2YS41LjUgMCAwIDEgMCAuODMyeiIgZmlsbD0icmdiYSgyNDcsMjQ2LDI0NywxKSIvPjwvc3ZnPg==");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-state-paused .jw-icon-playback:hover .jw-svg-icon-play {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTE5LjM3NiAxMi40MTZMOC43NzcgMTkuNDgyQS41LjUgMCAwIDEgOCAxOS4wNjZWNC45MzRhLjUuNSAwIDAgMSAuNzc3LS40MTZsMTAuNTk5IDcuMDY2YS41LjUgMCAwIDEgMCAuODMyeiIgZmlsbD0icmdiYSgyMjksOSwyMCwxKSIvPjwvc3ZnPg==");
+}
+
+/*
+ícone de Puase.
+ */
+.jw-svg-icon-pause path {
+  display: none;
+}
+
+.jw-svg-icon-pause {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTYgNWgydjE0SDZWNXptMTAgMGgydjE0aC0yVjV6IiBmaWxsPSJyZ2JhKDI0NywyNDYsMjQ3LDEpIi8+PC9zdmc+");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-playback:hover .jw-svg-icon-pause {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTYgNWgydjE0SDZWNXptMTAgMGgydjE0aC0yVjV6IiBmaWxsPSJyZ2JhKDIyOSw5LDIwLDEpIi8+PC9zdmc+");
+}
+
+/*
+Ícone de Configuração.
+ */
+.jw-svg-icon-settings path {
+  display: none;
+}
+
+.jw-svg-icon-settings {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIgMTJjMC0uODY1LjExLTEuNzAzLjMxNi0yLjUwNEEzIDMgMCAwIDAgNC45OSA0Ljg2N2E5Ljk5IDkuOTkgMCAwIDEgNC4zMzUtMi41MDUgMyAzIDAgMCAwIDUuMzQ4IDAgOS45OSA5Ljk5IDAgMCAxIDQuMzM1IDIuNTA1IDMgMyAwIDAgMCAyLjY3NSA0LjYzYy4yMDYuOC4zMTYgMS42MzguMzE2IDIuNTAzIDAgLjg2NS0uMTEgMS43MDMtLjMxNiAyLjUwNGEzIDMgMCAwIDAtMi42NzUgNC42MjkgOS45OSA5Ljk5IDAgMCAxLTQuMzM1IDIuNTA1IDMgMyAwIDAgMC01LjM0OCAwIDkuOTkgOS45OSAwIDAgMS00LjMzNS0yLjUwNSAzIDMgMCAwIDAtMi42NzUtNC42M0MyLjExIDEzLjcwNCAyIDEyLjg2NiAyIDEyem00LjgwNCAzYy42MyAxLjA5MS44MSAyLjM0Ni41NjQgMy41MjQuNDA4LjI5Ljg0Mi41NDEgMS4yOTcuNzVBNC45OTMgNC45OTMgMCAwIDEgMTIgMThjMS4yNiAwIDIuNDM4LjQ3MSAzLjMzNSAxLjI3NC40NTUtLjIwOS44ODktLjQ2IDEuMjk3LS43NUE0Ljk5MyA0Ljk5MyAwIDAgMSAxNy4xOTYgMTVhNC45OTMgNC45OTMgMCAwIDEgMi43Ny0yLjI1IDguMTI2IDguMTI2IDAgMCAwIDAtMS41QTQuOTkzIDQuOTkzIDAgMCAxIDE3LjE5NSA5YTQuOTkzIDQuOTkzIDAgMCAxLS41NjQtMy41MjQgNy45ODkgNy45ODkgMCAwIDAtMS4yOTctLjc1QTQuOTkzIDQuOTkzIDAgMCAxIDEyIDZhNC45OTMgNC45OTMgMCAwIDEtMy4zMzUtMS4yNzQgNy45OSA3Ljk5IDAgMCAwLTEuMjk3Ljc1QTQuOTkzIDQuOTkzIDAgMCAxIDYuODA0IDlhNC45OTMgNC45OTMgMCAwIDEtMi43NyAyLjI1IDguMTI2IDguMTI2IDAgMCAwIDAgMS41QTQuOTkzIDQuOTkzIDAgMCAxIDYuODA1IDE1ek0xMiAxNWEzIDMgMCAxIDEgMC02IDMgMyAwIDAgMSAwIDZ6bTAtMmExIDEgMCAxIDAgMC0yIDEgMSAwIDAgMCAwIDJ6IiBmaWxsPSJyZ2JhKDI0NywyNDYsMjQ3LDEpIi8+PC9zdmc+");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-settings:hover .jw-svg-icon-settings {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIgMTJjMC0uODY1LjExLTEuNzAzLjMxNi0yLjUwNEEzIDMgMCAwIDAgNC45OSA0Ljg2N2E5Ljk5IDkuOTkgMCAwIDEgNC4zMzUtMi41MDUgMyAzIDAgMCAwIDUuMzQ4IDAgOS45OSA5Ljk5IDAgMCAxIDQuMzM1IDIuNTA1IDMgMyAwIDAgMCAyLjY3NSA0LjYzYy4yMDYuOC4zMTYgMS42MzguMzE2IDIuNTAzIDAgLjg2NS0uMTEgMS43MDMtLjMxNiAyLjUwNGEzIDMgMCAwIDAtMi42NzUgNC42MjkgOS45OSA5Ljk5IDAgMCAxLTQuMzM1IDIuNTA1IDMgMyAwIDAgMC01LjM0OCAwIDkuOTkgOS45OSAwIDAgMS00LjMzNS0yLjUwNSAzIDMgMCAwIDAtMi42NzUtNC42M0MyLjExIDEzLjcwNCAyIDEyLjg2NiAyIDEyem00LjgwNCAzYy42MyAxLjA5MS44MSAyLjM0Ni41NjQgMy41MjQuNDA4LjI5Ljg0Mi41NDEgMS4yOTcuNzVBNC45OTMgNC45OTMgMCAwIDEgMTIgMThjMS4yNiAwIDIuNDM4LjQ3MSAzLjMzNSAxLjI3NC40NTUtLjIwOS44ODktLjQ2IDEuMjk3LS43NUE0Ljk5MyA0Ljk5MyAwIDAgMSAxNy4xOTYgMTVhNC45OTMgNC45OTMgMCAwIDEgMi43Ny0yLjI1IDguMTI2IDguMTI2IDAgMCAwIDAtMS41QTQuOTkzIDQuOTkzIDAgMCAxIDE3LjE5NSA5YTQuOTkzIDQuOTkzIDAgMCAxLS41NjQtMy41MjQgNy45ODkgNy45ODkgMCAwIDAtMS4yOTctLjc1QTQuOTkzIDQuOTkzIDAgMCAxIDEyIDZhNC45OTMgNC45OTMgMCAwIDEtMy4zMzUtMS4yNzQgNy45OSA3Ljk5IDAgMCAwLTEuMjk3Ljc1QTQuOTkzIDQuOTkzIDAgMCAxIDYuODA0IDlhNC45OTMgNC45OTMgMCAwIDEtMi43NyAyLjI1IDguMTI2IDguMTI2IDAgMCAwIDAgMS41QTQuOTkzIDQuOTkzIDAgMCAxIDYuODA1IDE1ek0xMiAxNWEzIDMgMCAxIDEgMC02IDMgMyAwIDAgMSAwIDZ6bTAtMmExIDEgMCAxIDAgMC0yIDEgMSAwIDAgMCAwIDJ6IiBmaWxsPSJyZ2JhKDIyOSw5LDIwLDEpIi8+PC9zdmc+");
+}
+
+/*
+Ícone de Qualidade.
+ */
+.jw-svg-icon-quality-100 path {
+  display: none;
+}
+
+.jw-svg-icon-quality-100 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTYuMTcgMThhMy4wMDEgMy4wMDEgMCAwIDEgNS42NiAwSDIydjJIMTEuODNhMy4wMDEgMy4wMDEgMCAwIDEtNS42NiAwSDJ2LTJoNC4xN3ptNi03YTMuMDAxIDMuMDAxIDAgMCAxIDUuNjYgMEgyMnYyaC00LjE3YTMuMDAxIDMuMDAxIDAgMCAxLTUuNjYgMEgydi0yaDEwLjE3em0tNi03YTMuMDAxIDMuMDAxIDAgMCAxIDUuNjYgMEgyMnYySDExLjgzYTMuMDAxIDMuMDAxIDAgMCAxLTUuNjYgMEgyVjRoNC4xN3pNOSA2YTEgMSAwIDEgMCAwLTIgMSAxIDAgMCAwIDAgMnptNiA3YTEgMSAwIDEgMCAwLTIgMSAxIDAgMCAwIDAgMnptLTYgN2ExIDEgMCAxIDAgMC0yIDEgMSAwIDAgMCAwIDJ6IiBmaWxsPSJyZ2JhKDI0NywyNDcsMjQ3LDEpIi8+PC9zdmc+");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jwplayer.jw-skin-netflix .jw-submenu-quality:hover .jw-svg-icon-quality-100 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTYuMTcgMThhMy4wMDEgMy4wMDEgMCAwIDEgNS42NiAwSDIydjJIMTEuODNhMy4wMDEgMy4wMDEgMCAwIDEtNS42NiAwSDJ2LTJoNC4xN3ptNi03YTMuMDAxIDMuMDAxIDAgMCAxIDUuNjYgMEgyMnYyaC00LjE3YTMuMDAxIDMuMDAxIDAgMCAxLTUuNjYgMEgydi0yaDEwLjE3em0tNi03YTMuMDAxIDMuMDAxIDAgMCAxIDUuNjYgMEgyMnYySDExLjgzYTMuMDAxIDMuMDAxIDAgMCAxLTUuNjYgMEgyVjRoNC4xN3pNOSA2YTEgMSAwIDEgMCAwLTIgMSAxIDAgMCAwIDAgMnptNiA3YTEgMSAwIDEgMCAwLTIgMSAxIDAgMCAwIDAgMnptLTYgN2ExIDEgMCAxIDAgMC0yIDEgMSAwIDAgMCAwIDJ6IiBmaWxsPSJyZ2JhKDIyOSw5LDIwLDEpIi8+PC9zdmc+");
+}
+
+/*
+Ícone de Fechar.
+ */
+.jw-svg-icon-close path {
+  display: none;
+}
+
+.jw-svg-icon-close {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEyIDEwLjU4Nmw0Ljk1LTQuOTUgMS40MTQgMS40MTQtNC45NSA0Ljk1IDQuOTUgNC45NS0xLjQxNCAxLjQxNC00Ljk1LTQuOTUtNC45NSA0Ljk1LTEuNDE0LTEuNDE0IDQuOTUtNC45NS00Ljk1LTQuOTVMNy4wNSA1LjYzNnoiIGZpbGw9InJnYmEoMjQ3LDI0NiwyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-settings-close:hover .jw-svg-icon-close {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEyIDEwLjU4Nmw0Ljk1LTQuOTUgMS40MTQgMS40MTQtNC45NSA0Ljk1IDQuOTUgNC45NS0xLjQxNCAxLjQxNC00Ljk1LTQuOTUtNC45NSA0Ljk1LTEuNDE0LTEuNDE0IDQuOTUtNC45NS00Ljk1LTQuOTVMNy4wNSA1LjYzNnoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+/*
+Ícone de Legenda.
+ */
+.jw-svg-icon-cc-off path {
+  display: none;
+}
+
+.jw-svg-icon-cc-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwSDI0VjI0SDB6Ii8+PHBhdGggZD0iTTIxIDNjLjU1MiAwIDEgLjQ0OCAxIDF2MTZjMCAuNTUyLS40NDggMS0xIDFIM2MtLjU1MiAwLTEtLjQ0OC0xLTFWNGMwLS41NTIuNDQ4LTEgMS0xaDE4em0tMSAySDR2MTRoMTZWNXpNOSA4YzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxMC4wNTMgMTAuMjI0IDkuNTUzIDEwIDkgMTBjLTEuMTA1IDAtMiAuODk1LTIgMnMuODk1IDIgMiAyYy41NTMgMCAxLjA1My0uMjI0IDEuNDE0LS41ODZsMS40MTQgMS40MTRDMTEuMTA0IDE1LjU1MiAxMC4xMDQgMTYgOSAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHptNyAwYzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxNy4wNTMgMTAuMjI0IDE2LjU1MyAxMCAxNiAxMGMtMS4xMDUgMC0yIC44OTUtMiAycy44OTUgMiAyIDJjLjU1MiAwIDEuMDUyLS4yMjQgMS40MTQtLjU4NmwxLjQxNCAxLjQxNEMxOC4xMDQgMTUuNTUyIDE3LjEwNCAxNiAxNiAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHoiIGZpbGw9InJnYmEoMjQ3LDI0NiwyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jwplayer.jw-skin-netflix .jw-submenu-captions:hover .jw-svg-icon-cc-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwSDI0VjI0SDB6Ii8+PHBhdGggZD0iTTIxIDNjLjU1MiAwIDEgLjQ0OCAxIDF2MTZjMCAuNTUyLS40NDggMS0xIDFIM2MtLjU1MiAwLTEtLjQ0OC0xLTFWNGMwLS41NTIuNDQ4LTEgMS0xaDE4em0tMSAySDR2MTRoMTZWNXpNOSA4YzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxMC4wNTMgMTAuMjI0IDkuNTUzIDEwIDkgMTBjLTEuMTA1IDAtMiAuODk1LTIgMnMuODk1IDIgMiAyYy41NTMgMCAxLjA1My0uMjI0IDEuNDE0LS41ODZsMS40MTQgMS40MTRDMTEuMTA0IDE1LjU1MiAxMC4xMDQgMTYgOSAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHptNyAwYzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxNy4wNTMgMTAuMjI0IDE2LjU1MyAxMCAxNiAxMGMtMS4xMDUgMC0yIC44OTUtMiAycy44OTUgMiAyIDJjLjU1MiAwIDEuMDUyLS4yMjQgMS40MTQtLjU4NmwxLjQxNCAxLjQxNEMxOC4xMDQgMTUuNTUyIDE3LjEwNCAxNiAxNiAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+.jw-icon-cc .jw-svg-icon-cc-off path {
+  display: none;
+}
+
+.jw-icon-cc .jw-svg-icon-cc-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwSDI0VjI0SDB6Ii8+PHBhdGggZD0iTTIxIDNjLjU1MiAwIDEgLjQ0OCAxIDF2MTZjMCAuNTUyLS40NDggMS0xIDFIM2MtLjU1MiAwLTEtLjQ0OC0xLTFWNGMwLS41NTIuNDQ4LTEgMS0xaDE4em0tMSAySDR2MTRoMTZWNXpNOSA4YzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxMC4wNTMgMTAuMjI0IDkuNTUzIDEwIDkgMTBjLTEuMTA1IDAtMiAuODk1LTIgMnMuODk1IDIgMiAyYy41NTMgMCAxLjA1My0uMjI0IDEuNDE0LS41ODZsMS40MTQgMS40MTRDMTEuMTA0IDE1LjU1MiAxMC4xMDQgMTYgOSAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHptNyAwYzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxNy4wNTMgMTAuMjI0IDE2LjU1MyAxMCAxNiAxMGMtMS4xMDUgMC0yIC44OTUtMiAycy44OTUgMiAyIDJjLjU1MiAwIDEuMDUyLS4yMjQgMS40MTQtLjU4NmwxLjQxNCAxLjQxNEMxOC4xMDQgMTUuNTUyIDE3LjEwNCAxNiAxNiAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHoiIGZpbGw9InJnYmEoMjQ3LDI0NiwyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-cc:hover .jw-svg-icon-cc-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwSDI0VjI0SDB6Ii8+PHBhdGggZD0iTTIxIDNjLjU1MiAwIDEgLjQ0OCAxIDF2MTZjMCAuNTUyLS40NDggMS0xIDFIM2MtLjU1MiAwLTEtLjQ0OC0xLTFWNGMwLS41NTIuNDQ4LTEgMS0xaDE4em0tMSAySDR2MTRoMTZWNXpNOSA4YzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxMC4wNTMgMTAuMjI0IDkuNTUzIDEwIDkgMTBjLTEuMTA1IDAtMiAuODk1LTIgMnMuODk1IDIgMiAyYy41NTMgMCAxLjA1My0uMjI0IDEuNDE0LS41ODZsMS40MTQgMS40MTRDMTEuMTA0IDE1LjU1MiAxMC4xMDQgMTYgOSAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHptNyAwYzEuMTA1IDAgMi4xMDUuNDQ4IDIuODI5IDEuMTczbC0xLjQxNCAxLjQxNEMxNy4wNTMgMTAuMjI0IDE2LjU1MyAxMCAxNiAxMGMtMS4xMDUgMC0yIC44OTUtMiAycy44OTUgMiAyIDJjLjU1MiAwIDEuMDUyLS4yMjQgMS40MTQtLjU4NmwxLjQxNCAxLjQxNEMxOC4xMDQgMTUuNTUyIDE3LjEwNCAxNiAxNiAxNmMtMi4yMDggMC00LTEuNzkyLTQtNHMxLjc5Mi00IDQtNHoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+.jw-icon-cc .jw-svg-icon-cc-on path {
+  display: none;
+}
+
+.jw-icon-cc .jw-svg-icon-cc-on {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwSDI0VjI0SDB6Ii8+PHBhdGggZD0iTTIxIDNjLjU1MiAwIDEgLjQ0OCAxIDF2MTZjMCAuNTUyLS40NDggMS0xIDFIM2MtLjU1MiAwLTEtLjQ0OC0xLTFWNGMwLS41NTIuNDQ4LTEgMS0xaDE4ek05IDhjLTIuMjA4IDAtNCAxLjc5Mi00IDRzMS43OTIgNCA0IDRjMS4xIDAgMi4xLS40NSAyLjgyOC0xLjE3MmwtMS40MTQtMS40MTRDMTAuMDUzIDEzLjc3NiA5LjU1MyAxNCA5IDE0Yy0xLjEwNSAwLTItLjg5NS0yLTJzLjg5NS0yIDItMmMuNTUgMCAxLjA0OC4yMiAxLjQxNS41ODdsMS40MTQtMS40MTRDMTEuMTA1IDguNDQ4IDEwLjEwNSA4IDkgOHptNyAwYy0yLjIwOCAwLTQgMS43OTItNCA0czEuNzkyIDQgNCA0YzEuMTA0IDAgMi4xMDQtLjQ0OCAyLjgyOC0xLjE3MmwtMS40MTQtMS40MTRjLS4zNjIuMzYyLS44NjIuNTg2LTEuNDE0LjU4Ni0xLjEwNSAwLTItLjg5NS0yLTJzLjg5NS0yIDItMmMuNTUzIDAgMS4wNTMuMjI0IDEuNDE1LjU4N2wxLjQxNC0xLjQxNEMxOC4xMDUgOC40NDggMTcuMTA1IDggMTYgOHoiIGZpbGw9InJnYmEoMjQ3LDI0NiwyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-cc:hover .jw-svg-icon-cc-on {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwSDI0VjI0SDB6Ii8+PHBhdGggZD0iTTIxIDNjLjU1MiAwIDEgLjQ0OCAxIDF2MTZjMCAuNTUyLS40NDggMS0xIDFIM2MtLjU1MiAwLTEtLjQ0OC0xLTFWNGMwLS41NTIuNDQ4LTEgMS0xaDE4ek05IDhjLTIuMjA4IDAtNCAxLjc5Mi00IDRzMS43OTIgNCA0IDRjMS4xIDAgMi4xLS40NSAyLjgyOC0xLjE3MmwtMS40MTQtMS40MTRDMTAuMDUzIDEzLjc3NiA5LjU1MyAxNCA5IDE0Yy0xLjEwNSAwLTItLjg5NS0yLTJzLjg5NS0yIDItMmMuNTUgMCAxLjA0OC4yMiAxLjQxNS41ODdsMS40MTQtMS40MTRDMTEuMTA1IDguNDQ4IDEwLjEwNSA4IDkgOHptNyAwYy0yLjIwOCAwLTQgMS43OTItNCA0czEuNzkyIDQgNCA0YzEuMTA0IDAgMi4xMDQtLjQ0OCAyLjgyOC0xLjE3MmwtMS40MTQtMS40MTRjLS4zNjIuMzYyLS44NjIuNTg2LTEuNDE0LjU4Ni0xLjEwNSAwLTItLjg5NS0yLTJzLjg5NS0yIDItMmMuNTUzIDAgMS4wNTMuMjI0IDEuNDE1LjU4N2wxLjQxNC0xLjQxNEMxOC4xMDUgOC40NDggMTcuMTA1IDggMTYgOHoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+/*
+Ícone de Volume.
+ */
+.jw-svg-icon-volume-100 path {
+  display: none;
+}
+
+.jw-svg-icon-volume-100 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEwIDcuMjJMNi42MDMgMTBIM3Y0aDMuNjAzTDEwIDE2Ljc4VjcuMjJ6TTUuODg5IDE2SDJhMSAxIDAgMCAxLTEtMVY5YTEgMSAwIDAgMSAxLTFoMy44ODlsNS4yOTQtNC4zMzJhLjUuNSAwIDAgMSAuODE3LjM4N3YxNS44OWEuNS41IDAgMCAxLS44MTcuMzg3TDUuODkgMTZ6bTEzLjUxNyA0LjEzNGwtMS40MTYtMS40MTZBOC45NzggOC45NzggMCAwIDAgMjEgMTJhOC45ODIgOC45ODIgMCAwIDAtMy4zMDQtNi45NjhsMS40Mi0xLjQyQTEwLjk3NiAxMC45NzYgMCAwIDEgMjMgMTJjMCAzLjIyMy0xLjM4NiA2LjEyMi0zLjU5NCA4LjEzNHptLTMuNTQzLTMuNTQzbC0xLjQyMi0xLjQyMkEzLjk5MyAzLjk5MyAwIDAgMCAxNiAxMmMwLTEuNDMtLjc1LTIuNjg1LTEuODgtMy4zOTJsMS40MzktMS40MzlBNS45OTEgNS45OTEgMCAwIDEgMTggMTJjMCAxLjg0Mi0uODMgMy40OS0yLjEzNyA0LjU5MXoiIGZpbGw9InJnYmEoMjQ3LDI0NiwyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-volume:hover .jw-svg-icon-volume-100 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEwIDcuMjJMNi42MDMgMTBIM3Y0aDMuNjAzTDEwIDE2Ljc4VjcuMjJ6TTUuODg5IDE2SDJhMSAxIDAgMCAxLTEtMVY5YTEgMSAwIDAgMSAxLTFoMy44ODlsNS4yOTQtNC4zMzJhLjUuNSAwIDAgMSAuODE3LjM4N3YxNS44OWEuNS41IDAgMCAxLS44MTcuMzg3TDUuODkgMTZ6bTEzLjUxNyA0LjEzNGwtMS40MTYtMS40MTZBOC45NzggOC45NzggMCAwIDAgMjEgMTJhOC45ODIgOC45ODIgMCAwIDAtMy4zMDQtNi45NjhsMS40Mi0xLjQyQTEwLjk3NiAxMC45NzYgMCAwIDEgMjMgMTJjMCAzLjIyMy0xLjM4NiA2LjEyMi0zLjU5NCA4LjEzNHptLTMuNTQzLTMuNTQzbC0xLjQyMi0xLjQyMkEzLjk5MyAzLjk5MyAwIDAgMCAxNiAxMmMwLTEuNDMtLjc1LTIuNjg1LTEuODgtMy4zOTJsMS40MzktMS40MzlBNS45OTEgNS45OTEgMCAwIDEgMTggMTJjMCAxLjg0Mi0uODMgMy40OS0yLjEzNyA0LjU5MXoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+.jw-svg-icon-volume-50 path {
+  display: none;
+}
+
+.jw-svg-icon-volume-50 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEzIDcuMjJMOS42MDMgMTBINnY0aDMuNjAzTDEzIDE2Ljc4VjcuMjJ6TTguODg5IDE2SDVhMSAxIDAgMCAxLTEtMVY5YTEgMSAwIDAgMSAxLTFoMy44ODlsNS4yOTQtNC4zMzJhLjUuNSAwIDAgMSAuODE3LjM4N3YxNS44OWEuNS41IDAgMCAxLS44MTcuMzg3TDguODkgMTZ6bTkuOTc0LjU5MWwtMS40MjItMS40MjJBMy45OTMgMy45OTMgMCAwIDAgMTkgMTJjMC0xLjQzLS43NS0yLjY4NS0xLjg4LTMuMzkybDEuNDM5LTEuNDM5QTUuOTkxIDUuOTkxIDAgMCAxIDIxIDEyYzAgMS44NDItLjgzIDMuNDktMi4xMzcgNC41OTF6IiBmaWxsPSJyZ2JhKDI0NywyNDYsMjQ3LDEpIi8+PC9zdmc+");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-volume:hover .jw-svg-icon-volume-50 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEzIDcuMjJMOS42MDMgMTBINnY0aDMuNjAzTDEzIDE2Ljc4VjcuMjJ6TTguODg5IDE2SDVhMSAxIDAgMCAxLTEtMVY5YTEgMSAwIDAgMSAxLTFoMy44ODlsNS4yOTQtNC4zMzJhLjUuNSAwIDAgMSAuODE3LjM4N3YxNS44OWEuNS41IDAgMCAxLS44MTcuMzg3TDguODkgMTZ6bTkuOTc0LjU5MWwtMS40MjItMS40MjJBMy45OTMgMy45OTMgMCAwIDAgMTkgMTJjMC0xLjQzLS43NS0yLjY4NS0xLjg4LTMuMzkybDEuNDM5LTEuNDM5QTUuOTkxIDUuOTkxIDAgMCAxIDIxIDEyYzAgMS44NDItLjgzIDMuNDktMi4xMzcgNC41OTF6IiBmaWxsPSJyZ2JhKDIyOSw5LDIwLDEpIi8+PC9zdmc+");
+}
+
+.jw-svg-icon-volume-0 path {
+  display: none;
+}
+
+.jw-svg-icon-volume-0 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEwIDcuMjJMNi42MDMgMTBIM3Y0aDMuNjAzTDEwIDE2Ljc4VjcuMjJ6TTUuODg5IDE2SDJhMSAxIDAgMCAxLTEtMVY5YTEgMSAwIDAgMSAxLTFoMy44ODlsNS4yOTQtNC4zMzJhLjUuNSAwIDAgMSAuODE3LjM4N3YxNS44OWEuNS41IDAgMCAxLS44MTcuMzg3TDUuODkgMTZ6bTE0LjUyNS00bDMuNTM2IDMuNTM2LTEuNDE0IDEuNDE0TDE5IDEzLjQxNGwtMy41MzYgMy41MzYtMS40MTQtMS40MTRMMTcuNTg2IDEyIDE0LjA1IDguNDY0bDEuNDE0LTEuNDE0TDE5IDEwLjU4NmwzLjUzNi0zLjUzNiAxLjQxNCAxLjQxNEwyMC40MTQgMTJ6IiBmaWxsPSJyZ2JhKDI0NywyNDYsMjQ3LDEpIi8+PC9zdmc+");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-volume:hover .jw-svg-icon-volume-0 {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEwIDcuMjJMNi42MDMgMTBIM3Y0aDMuNjAzTDEwIDE2Ljc4VjcuMjJ6TTUuODg5IDE2SDJhMSAxIDAgMCAxLTEtMVY5YTEgMSAwIDAgMSAxLTFoMy44ODlsNS4yOTQtNC4zMzJhLjUuNSAwIDAgMSAuODE3LjM4N3YxNS44OWEuNS41IDAgMCAxLS44MTcuMzg3TDUuODkgMTZ6bTE0LjUyNS00bDMuNTM2IDMuNTM2LTEuNDE0IDEuNDE0TDE5IDEzLjQxNGwtMy41MzYgMy41MzYtMS40MTQtMS40MTRMMTcuNTg2IDEyIDE0LjA1IDguNDY0bDEuNDE0LTEuNDE0TDE5IDEwLjU4NmwzLjUzNi0zLjUzNiAxLjQxNCAxLjQxNEwyMC40MTQgMTJ6IiBmaWxsPSJyZ2JhKDIyOSw5LDIwLDEpIi8+PC9zdmc+");
+}
+
+/*
+Ícone de Tela Cheia.
+ */
+.jw-svg-icon-fullscreen-on path {
+  display: none;
+}
+
+.jw-svg-icon-fullscreen-on {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIwIDNoMnY2aC0yVjVoLTRWM2g0ek00IDNoNHYySDR2NEgyVjNoMnptMTYgMTZ2LTRoMnY2aC02di0yaDR6TTQgMTloNHYySDJ2LTZoMnY0eiIgZmlsbD0icmdiYSgyNDcsMjQ2LDI0NywxKSIvPjwvc3ZnPg==");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-fullscreen:hover .jw-svg-icon-fullscreen-on {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIwIDNoMnY2aC0yVjVoLTRWM2g0ek00IDNoNHYySDR2NEgyVjNoMnptMTYgMTZ2LTRoMnY2aC02di0yaDR6TTQgMTloNHYySDJ2LTZoMnY0eiIgZmlsbD0icmdiYSgyMjksOSwyMCwxKSIvPjwvc3ZnPg==");
+}
+
+.jw-svg-icon-fullscreen-off path {
+  display: none;
+}
+
+.jw-svg-icon-fullscreen-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTE4IDdoNHYyaC02VjNoMnY0ek04IDlIMlY3aDRWM2gydjZ6bTEwIDh2NGgtMnYtNmg2djJoLTR6TTggMTV2Nkg2di00SDJ2LTJoNnoiIGZpbGw9InJnYmEoMjQ3LDI0NiwyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jw-icon-fullscreen:hover .jw-svg-icon-fullscreen-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTE4IDdoNHYyaC02VjNoMnY0ek04IDlIMlY3aDRWM2gydjZ6bTEwIDh2NGgtMnYtNmg2djJoLTR6TTggMTV2Nkg2di00SDJ2LTJoNnoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+/* Added New Icons - 06-26-22 */
+
+/* 
+Icone de Share.
+*/
+.jwplayer.jw-skin-netflix .jw-settings-sharing .jw-svg-icon-sharing path {
+  display: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-settings-sharing .jw-svg-icon-sharing {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEzLjEyIDE3LjAyM2wtNC4xOTktMi4yOWE0IDQgMCAxIDEgMC01LjQ2NWw0LjItMi4yOWE0IDQgMCAxIDEgLjk1OSAxLjc1NWwtNC4yIDIuMjlhNC4wMDggNC4wMDggMCAwIDEgMCAxLjk1NGw0LjE5OSAyLjI5YTQgNCAwIDEgMS0uOTU5IDEuNzU1ek02IDE0YTIgMiAwIDEgMCAwLTQgMiAyIDAgMCAwIDAgNHptMTEtNmEyIDIgMCAxIDAgMC00IDIgMiAwIDAgMCAwIDR6bTAgMTJhMiAyIDAgMSAwIDAtNCAyIDIgMCAwIDAgMCA0eiIgZmlsbD0icmdiYSgyNDcsMjQ2LDI0NywxKSIvPjwvc3ZnPg==");
+  background-repeat: no-repeat;
+  background-position: center;
+  -webkit-transition: 0.2s;
+  transition: 0.2s;
+  background-size: 100%;
+}
+
+.jwplayer.jw-skin-netflix .jw-settings-sharing:hover .jw-svg-icon-sharing {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTEzLjEyIDE3LjAyM2wtNC4xOTktMi4yOWE0IDQgMCAxIDEgMC01LjQ2NWw0LjItMi4yOWE0IDQgMCAxIDEgLjk1OSAxLjc1NWwtNC4yIDIuMjlhNC4wMDggNC4wMDggMCAwIDEgMCAxLjk1NGw0LjE5OSAyLjI5YTQgNCAwIDEgMS0uOTU5IDEuNzU1ek02IDE0YTIgMiAwIDEgMCAwLTQgMiAyIDAgMCAwIDAgNHptMTEtNmEyIDIgMCAxIDAgMC00IDIgMiAwIDAgMCAwIDR6bTAgMTJhMiAyIDAgMSAwIDAtNCAyIDIgMCAwIDAgMCA0eiIgZmlsbD0icmdiYSgyMjksOSwyMCwxKSIvPjwvc3ZnPg==");
+  background-repeat: no-repeat;
+  background-position: center;
+  -webkit-transition: 0.2s;
+  transition: 0.2s;
+  background-size: 100%;
+}
+
+/* 
+ícone de áudio.
+*/
+.jwplayer.jw-skin-netflix .jw-svg-icon-audio-tracks path {
+  display: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-svg-icon-audio-tracks {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIgMThoMTB2Mkgydi0yem0wLTdoMTR2Mkgydi0yem0wLTdoMjB2MkgyVjR6bTE3IDExLjE3VjloNXYyaC0zdjdhMyAzIDAgMSAxLTItMi44M3pNMTggMTlhMSAxIDAgMSAwIDAtMiAxIDEgMCAwIDAgMCAyeiIgZmlsbD0icmdiYSgyNDcsMjQ3LDI0NywxKSIvPjwvc3ZnPg==");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jwplayer.jw-skin-netflix
+  .jwplayer.jw-skin-netflix
+  .jw-submenu-audioTracks:hover
+  .jw-svg-icon-audio-tracks {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIgMThoMTB2Mkgydi0yem0wLTdoMTR2Mkgydi0yem0wLTdoMjB2MkgyVjR6bTE3IDExLjE3VjloNXYyaC0zdjdhMyAzIDAgMSAxLTItMi44M3pNMTggMTlhMSAxIDAgMSAwIDAtMiAxIDEgMCAwIDAgMCAyeiIgZmlsbD0icmdiYSgyMjksOSwyMCwxKSIvPjwvc3ZnPg==");
+}
+
+/*
+Ícone de picture in picture.
+*/
+.jw-svg-icon-pip-on path {
+  display: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-svg-icon-pip-on {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIxIDNhMSAxIDAgMCAxIDEgMXY3aC0yVjVINHYxNGg2djJIM2ExIDEgMCAwIDEtMS0xVjRhMSAxIDAgMCAxIDEtMWgxOHptMCAxMGExIDEgMCAwIDEgMSAxdjZhMSAxIDAgMCAxLTEgMWgtOGExIDEgMCAwIDEtMS0xdi02YTEgMSAwIDAgMSAxLTFoOHptLTEgMmgtNnY0aDZ2LTR6TTYuNzA3IDYuMjkzbDIuMjUgMi4yNUwxMSA2LjVWMTJINS41bDIuMDQzLTIuMDQzLTIuMjUtMi4yNSAxLjQxNC0xLjQxNHoiIGZpbGw9InJnYmEoMjQ3LDI0NywyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jwplayer.jw-skin-netflix .jw-icon-pip:hover .jw-svg-icon-pip-on {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIxIDNhMSAxIDAgMCAxIDEgMXY3aC0yVjVINHYxNGg2djJIM2ExIDEgMCAwIDEtMS0xVjRhMSAxIDAgMCAxIDEtMWgxOHptMCAxMGExIDEgMCAwIDEgMSAxdjZhMSAxIDAgMCAxLTEgMWgtOGExIDEgMCAwIDEtMS0xdi02YTEgMSAwIDAgMSAxLTFoOHptLTEgMmgtNnY0aDZ2LTR6TTYuNzA3IDYuMjkzbDIuMjUgMi4yNUwxMSA2LjVWMTJINS41bDIuMDQzLTIuMDQzLTIuMjUtMi4yNSAxLjQxNC0xLjQxNHoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+.jwplayer.jw-skin-netflix .jw-svg-icon-pip-off path {
+  display: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-svg-icon-pip-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIxIDNhMSAxIDAgMCAxIDEgMXY3aC0yVjVINHYxNGg2djJIM2ExIDEgMCAwIDEtMS0xVjRhMSAxIDAgMCAxIDEtMWgxOHptMCAxMGExIDEgMCAwIDEgMSAxdjZhMSAxIDAgMCAxLTEgMWgtOGExIDEgMCAwIDEtMS0xdi02YTEgMSAwIDAgMSAxLTFoOHptLTEgMmgtNnY0aDZ2LTR6bS04LjUtOEw5LjQ1NyA5LjA0M2wyLjI1IDIuMjUtMS40MTQgMS40MTQtMi4yNS0yLjI1TDYgMTIuNVY3aDUuNXoiIGZpbGw9InJnYmEoMjQ3LDI0NywyNDcsMSkiLz48L3N2Zz4=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.jwplayer.jw-skin-netflix .jw-icon-pip:hover .jw-svg-icon-pip-off {
+  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0Ij48cGF0aCBmaWxsPSJub25lIiBkPSJNMCAwaDI0djI0SDB6Ii8+PHBhdGggZD0iTTIxIDNhMSAxIDAgMCAxIDEgMXY3aC0yVjVINHYxNGg2djJIM2ExIDEgMCAwIDEtMS0xVjRhMSAxIDAgMCAxIDEtMWgxOHptMCAxMGExIDEgMCAwIDEgMSAxdjZhMSAxIDAgMCAxLTEgMWgtOGExIDEgMCAwIDEtMS0xdi02YTEgMSAwIDAgMSAxLTFoOHptLTEgMmgtNnY0aDZ2LTR6bS04LjUtOEw5LjQ1NyA5LjA0M2wyLjI1IDIuMjUtMS40MTQgMS40MTQtMi4yNS0yLjI1TDYgMTIuNVY3aDUuNXoiIGZpbGw9InJnYmEoMjI5LDksMjAsMSkiLz48L3N2Zz4=");
+}
+
+/* Buffer Netflix */
+.jwplayer.jw-skin-netflix .jw-svg-icon-buffer path {
+  display: none;
+}
+
+.jwplayer.jw-skin-netflix .jw-svg-icon-buffer {
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACWCAMAAAAL34HQAAACfFBMVEUAAAAAAAC/AADlCBPlCBTlCBPkCBTlCBPVAADkCROqAADiABThAA/bAADkCRPlCBPiBxLkCBTcAAzkCBTfAADkCBPjAADkBxPkCBPMAADkBxHkCBTkCRPjCRPkCRPkCBTlCRPlCBPlCBTRAADlCRPkCRPkBRLkCBPjBhHlCBTlCBTgAArhBxLlCBTkCBPkCRLkCBPfBhPlCBTkCBPkCRTfCBDlCRTlCRLhCRHlCRHkCBTlBxTlCBPbABLjCBTlCBTfABDlCRTkBRCAAADkABLlCRPlCRLkCRLhCA/lBRDkCBPjCBLlCBPiBhHkBxLkCBPjCRTkCRPkCRPlCRTbAAzjCBPlCBTkCBTkCBTkCRTjCRPhBhLlCBPlCRTlCBPlCRPdABHjBxPkCBPiBw/jBhPlCRTkCRPlBxTlCBPjCBLkCRPkCRTlCBTkCBTkCRPkCRPlCBLkCBTlCBPkCBTgCA/kCBPjCBPeAAvkCBTjCBTlCBPkBxLkCRLkCBPkCBPkCRTlCBPkCRPlCRPkCRPlCBPiBRPiBhPkCBPkBxTjBxLjCRPfAAvZAA3kCRTjBw7lCRTlCBPlCRPkCRPkCBPlCBPkBw3jCBTkCBPjCRPlCBPjBxPYABTjBhLkCBPjBxLlCBPjBxLkCBLkBhLjBRPkCRPkCBPjBw7lCRTkCBPlCBPlCBTlCBTgBhPkCRPjABPkCBPkCBTlCRTiCBDlBxPlCBTlCBLlCBPkCBPkCBPiBRTkCBPhBhLlCBPlBxPjCBDlBxPkCRTkCRTlCBLkBxLkBxTkCBTeCBDkCBPjCBTkBxHlCBTkCRPkCRTkBRDjBRPiBhPkBxTlCBLkCBPlCRTfMlk/AAAA03RSTlMAAQT+wvH4/QbwAxoRB+O4RsAW2wj6CWn5Ckz2snbK967fxAuvlTjGLfP0GUW3fFbTKKaXtCDNOjtYqE37DkD1EM4vAhywHXIiMcVl4CxwelrHyOgVncPcmY93K0TpupMPboYjUerlTodj0rOcp5arYbW5giG8XBdmW6WMVdhD0IiQkuTWNVCgaIuUGBTPJefUkbGj4SaAeXikbA1TX4r8b31UNuy7JHV718GbKckbotrMPmvefvKEYDShKtVqP4mOc2JxjUEfXoFLmu/RMDdPZ3+9Zu7L6QAABANJREFUeF7t2FVzXFcQBOC+y2JmZrLFaBKD2ZLMHDtmihliZnaYmZmZmbn/UM7d3bJkWZWHPOT2Q75fMHXqzPTU4N9a9sRdwxEJt0FI6iMLTjEk34KG7vhDlRwxBwr2V8fyBovgvJZD6RyrAw7b0Myb+ZPhqPhcjicXTvpsIcflXg7n3DuR48vbB8dkrEnneHyeuYlwzNEC3qwiO6c1Bs55uMHNsdYtjg/AUaUFHMO3Y7ILzrJypvBGd6RFw2nRYxvQkymQzK8kcTR3cSkE/OjlaHFdUPC2n6PUHoWEdznKe/0uKLBOcpTGKEiwtnJEhMzCvoojZvRBxOe8zv2YCyLu53XeTKioGcnmWbOhojSPYRxMhIqmFQzjrlSoiGlmGHsDkFHCMG5zQcZhhjFbqKq1XoYlJEOG5WFY81ToeIhh66OgY08lQ/KehpC9DNsHITUMWwUhybMYsjkZQuYyJOtjCKmqYEgalGxnyEsWhET5GJReByVLGHIflMxvZ9AbMVCyhiFPQUnMMwx6FVLmMWQapCQwKA5S6jQf63YGvQkt4ZBug5TpDLrHBSm7GfQktGymzb0HUgYYtBBaNjHoALR8RNuUaGgpoC0BWvoYlAPJmC6HYvLEQkwcbecgJpa289CymkHToaWFtiwXtDxKWyHEPEBbCcTcSdvXELODtkyIKaStDmKSaPgDEHOKxjDUrKPxItRE0CiDmiwaO6HmcRp3Q42PxlaouUbjdag5TWMS1JTRyIeanTS2QM2DNFZCzQnJLRAv0OiEmg9orICaD2krgpgMP43ZkNwDJ0NNMY1boGY3je1Qs4GGB2oSaURYmn++HGou0vgUajJp1ENNkU/xSAk8S+M5qOmn8TzUvOYnOQQ5u0i6e6BmnmYspnol7xB4WXPQd0medYGVJL1FUDOBxkzIuUKy1oKagzTOQk3kaZK5kHOWRjzkDEqu9HiLxq2Q00jynWSoaaokWQ05c0i290BN9xDJbMiZnaIZQUtJVqyFGmsLybJIqIkuIPk+5JxJJ92CQ/UAyYplkHOcZFIH1Fj1JPcGoCaQQLLegproYySXQM7lWpI5kJP4CcmlkHPpCMmNkLM/l2SJBTUZxSQnxUBN9xckC+dDTloKGVsKOS3ryZQvLai53EtyYiLkbPKSw/GQ0xdHuhd3QM5XEeS1w5BTdc5NNl6FnDMzyJSLVZDTdoTMO3EJaiIPHiOzvumBnOVx5JRJ31pQU97gJRfNjYKajLZeH/2eOd9BzdTv8yPIzuMTUiHG1fqDp50+z4Wapn9oEpcjpU1P+2nGz6z8Jf/C+QkDqyMRBmvqwLTWX69GFcE5Vb/9/sefDcWDnVeG/sretuDkxur+mZO7AvgP/e9vtgtrs8pPMe8AAAAASUVORK5CYII=");
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+
+        .jw-wrapper.jw-reset {
+            position: fixed;
         }
     </style>
 </head>
 <body>
-    <div id="player-container">
-        <video id="video-player" playsinline></video>
-        <div id="loading-spinner" class="loading-spinner"></div>
-        <div class="watermark">
-            <span class="logo-b">B</span><span>inTV</span>
-        </div>
-        <div class="progress-bar-container" id="progressBarContainer">
-            <div class="buffer-bar" id="bufferBar"></div>
-            <div class="progress-bar" id="progressBar"></div>
-            <div class="thumb" id="progressThumb"></div>
-        </div>
-        <div class="controls-container">
-            <div class="flex items-center justify-between w-full p-4">
-                <div class="flex items-center space-x-2">
-                    <button id="play-pause-button" class="control-button">
-                        <i class="fas fa-play" id="play-pause-icon"></i>
-                    </button>
-                    <button id="volume-button" class="control-button">
-                        <i class="fas fa-volume-up" id="volume-icon"></i>
-                    </button>
-                    <div class="slider-wrapper hidden group-hover:block" id="volumeSliderWrapper">
-                        <div class="volume-fill" id="volumeFill"></div>
-                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" class="volume-slider">
-                    </div>
-                    <span class="text-sm font-medium ml-2 text-white"><span id="current-time">0:00</span> / <span id="duration">0:00</span></span>
-                    <div class="live-indicator flex items-center ml-4">
-                        <span class="live-indicator-dot"></span>
-                        LIVE
-                    </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                    <button id="cc-button" class="control-button opacity-70 cursor-not-allowed hidden md:flex" title="Subtitles (Not Implemented)">
-                        <i class="fas fa-closed-captioning"></i>
-                    </button>
-                    <button id="settings-button" class="control-button opacity-70 cursor-not-allowed hidden md:flex" title="Settings (Not Implemented)">
-                        <i class="fas fa-cog"></i>
-                    </button>
-                    <button id="pip-button" class="control-button opacity-70 cursor-not-allowed" title="Picture-in-Picture (Not Implemented)">
-                        <i class="fas fa-picture-in-picture"></i>
-                    </button>
-                    <button id="fullscreen-button" class="control-button">
-                        <i class="fas fa-expand-alt" id="fullscreen-icon"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+<div id="playerContainer">
+    <div id="player">Loading the player...</div>
+  
+
+
+<div class="share_channell">
+    <div class="share-channel">
+        <div class="share-channel_title">Copy for your site</div>
+        <textarea id="player_share" onclick="this.select();" onfocus="this.select();"></textarea>
+        <button class="custom-btn" onclick="document.querySelector('#player_share').select();document.execCommand('copy');">Click to copy</button>
     </div>
-    <div id="customModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close-button" id="closeModalBtn">&times;</span>
-            <p id="modalMessage"></p>
-        </div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script>
-        const video = document.getElementById('video-player');
-        const playPauseButton = document.getElementById('play-pause-button');
-        const playPauseIcon = document.getElementById('play-pause-icon');
-        const volumeButton = document.getElementById('volume-button');
-        const volumeIcon = document.getElementById('volume-icon');
-        const volumeSlider = document.getElementById('volume-slider');
-        const volumeFill = document.getElementById('volumeFill');
-        const progressBarContainer = document.getElementById('progressBarContainer');
-        const progressBar = document.getElementById('progressBar');
-        const bufferBar = document.getElementById('bufferBar');
-        const progressThumb = document.getElementById('progressThumb');
-        const currentTimeSpan = document.getElementById('current-time');
-        const durationSpan = document.getElementById('duration');
-        const fullscreenButton = document.getElementById('fullscreen-button');
-        const fullscreenIcon = document.getElementById('fullscreen-icon');
-        const controlsContainer = document.querySelector('.controls-container');
-        const playerContainer = document.getElementById('player-container');
-        const customModal = document.getElementById('customModal');
-        const modalMessage = document.getElementById('modalMessage');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const loadingSpinner = document.getElementById('loading-spinner');
+</div>
 
-        let isPlaying = false;
-        let isFullscreen = false;
-        let volumeBeforeMute = video.volume;
-        let hlsInstance;
-        let controlsTimeout;
-        let isBuffering = false;
-        let spinnerTimeout;
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var mora = getParameterByName('mora');
+        var embed = getParameterByName('embed');
+        var getIMG = decodeURIComponent(getParameterByName('img') || '');
+        var title = decodeURIComponent(getParameterByName('title') || '');
+        var getKEY = getParameterByName('key');
+        var getKEY2 = getParameterByName('key2');
 
-        // Function to show custom modal messages
-        function showModal(message) {
-            modalMessage.textContent = message;
-            customModal.style.display = 'flex';
-        }
+        if (mora) {
+            // JWPlayer setup
+            jwplayer.key = 'XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo';
 
-        closeModalBtn.onclick = function() {
-            customModal.style.display = 'none';
-        }
-
-        window.onclick = function(event) {
-            if (event.target == customModal) {
-                customModal.style.display = 'none';
-            }
-        }
-
-        // Function to manage spinner with debouncing
-        function manageSpinner(show) {
-            clearTimeout(spinnerTimeout);
-            if (show && !isPlaying) {
-                loadingSpinner.style.display = 'block';
-            } else {
-                spinnerTimeout = setTimeout(() => {
-                    loadingSpinner.style.display = 'none';
-                }, 200); // Debounce to prevent flicker
-            }
-        }
-
-        // Function to load the M3U8 stream
-        function loadM3u8Stream(url) {
-            if (!url) {
-                showModal('No M3U8 URL provided. Please go back and enter one.');
-                manageSpinner(false);
+            if (mora === "#") {
+                alert('Return to the previous page');
                 return;
             }
 
-            manageSpinner(true);
+            var playerInstance = jwplayer("player");
+            var sources = [];
 
-            if (hlsInstance) {
-                hlsInstance.destroy();
-                console.log('Existing HLS instance destroyed.');
+            if (mora.endsWith(".m3u8")) {
+                sources.push({
+                    "default": true,
+                    "type": "hls",
+                    "file": mora,
+                    "label": "HLS"
+                });
+            } else if (mora.endsWith(".mp4")) {
+                sources.push({
+                    "default": true,
+                    "type": "mp4",
+                    "file": mora,
+                    "label": "MP4"
+                });
+            } else if (mora.endsWith(".mpd")) {
+                sources.push({
+                    "default": true,
+                    "type": "dash",
+                    "file": mora,
+                    "label": "DASH"
+                });
             }
 
-            video.removeAttribute('src');
-            video.style.display = 'block';
-
-            if (Hls.isSupported()) {
-                hlsInstance = new Hls({
-                    liveSyncDurationCount: 3,
-                    liveMaxBufferLength: 30,
-                    lowLatencyMode: true,
-                    maxBufferLength: 10, // Reduce buffer to minimize stalls
-                    maxMaxBufferLength: 20,
-                });
-                hlsInstance.loadSource(url);
-                hlsInstance.attachMedia(video);
-
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
-                    console.log('HLS manifest parsed.');
-                    video.play().catch(error => {
-                        console.error('Auto-play failed:', error);
-                        manageSpinner(false);
-                        showModal('Auto-play failed. Please press play to start the stream.');
-                    });
-                });
-
-                hlsInstance.on(Hls.Events.BUFFER_APPENDING, function() {
-                    if (!isPlaying) {
-                        manageSpinner(true);
+            var playerSetup = {
+                playlist: [{
+                    "title": title,
+                    "description": "Ultra HD | Sports Player",
+                    "image": getIMG,
+                    "sources": sources
+                }],
+                width: "100%",
+                height: "100%",
+                aspectratio: "16:9",
+                autostart: true,
+                cast: {},
+                logo: {
+                    file: "",
+                    link: "",
+                    position: "top-right"
+                },
+                advertising: {
+                    client: "vast",
+                    schedule: [{
+                        offset: "pre",
+                        tag: "sdsd"
+                    }]
+                },
+                skin: {
+                    name: "netflix"
+                },
+                
+                hlsjsConfig: {
+                    debug: false,
+                    p2pConfig: {
+                        live: true // set false in VOD mode
                     }
-                });
+                }
+            };
 
-                hlsInstance.on(Hls.Events.BUFFER_APPENDED, function() {
-                    manageSpinner(false);
-                });
-
-                hlsInstance.on(Hls.Events.ERROR, function(event, data) {
-                    if (data.fatal) {
-                        manageSpinner(false);
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.error('Fatal network error:', data.details);
-                                hlsInstance.recoverMediaError();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                console.error('Fatal media error:', data.details);
-                                hlsInstance.recoverMediaError();
-                                break;
-                            default:
-                                console.error('Unrecoverable error:', data);
-                                showModal(`An unrecoverable error occurred: ${data.details}.`);
-                                hlsInstance.destroy();
-                                break;
-                        }
-                    } else if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
-                        manageSpinner(true);
+            // Add DRM configuration if not HLS
+            if (!mora.endsWith(".m3u8")) {
+                playerSetup.drm = {
+                    "clearkey": {
+                        "keyId": getKEY,
+                        "key": getKEY2
                     }
-                });
-
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = url;
-                video.load();
-
-                video.addEventListener('canplaythrough', function() {
-                    console.log('Native HLS loaded.');
-                    manageSpinner(false);
-                    video.play().catch(error => {
-                        console.error('Auto-play failed:', error);
-                        manageSpinner(false);
-                        showModal('Auto-play failed. Please press play to start the stream.');
-                    });
-                }, { once: true });
-
-                video.addEventListener('error', function(e) {
-                    console.error('Native HLS error:', e);
-                    manageSpinner(false);
-                    showModal('Error loading video. Your browser might not support this stream directly, or the URL is invalid.');
-                }, { once: true });
-            } else {
-                manageSpinner(false);
-                showModal('Your browser does not support HLS video playback.');
+                };
             }
-        }
 
-        // Get URL parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        const videoSrcFromUrl = urlParams.get('url');
+            playerInstance.setup(playerSetup);
 
-        if (videoSrcFromUrl) {
-            loadM3u8Stream(decodeURIComponent(videoSrcFromUrl));
+            // Google Analytics event tracking
+            function trackJWPlayerEvent(eventCategory, eventAction, eventLabel, eventValue) {
+                gtag('event', eventAction, {
+                    'event_category': eventCategory,
+                    'event_label': eventLabel,
+                    'value': eventValue
+                });
+            }
+
+            // Variables to track view duration
+            var viewDuration = 0;
+            var viewStart = 0;
+            var isPlaying = false;
+
+            // Start tracking the view duration
+            playerInstance.on('play', function () {
+                if (!isPlaying) {
+                    viewStart = Date.now();
+                    isPlaying = true;
+                }
+                trackJWPlayerEvent('Video', 'Play', title);
+            });
+
+            // Pause tracking the view duration
+            playerInstance.on('pause', function () {
+                if (isPlaying) {
+                    viewDuration += (Date.now() - viewStart);
+                    isPlaying = false;
+                }
+                trackJWPlayerEvent('Video', 'Pause', title, Math.round(viewDuration / 1000));
+            });
+
+            // Complete tracking the view duration
+            playerInstance.on('complete', function () {
+                if (isPlaying) {
+                    viewDuration += (Date.now() - viewStart);
+                    isPlaying = false;
+                }
+                trackJWPlayerEvent('Video', 'Complete', title, Math.round(viewDuration / 1000));
+            });
+
+            // Track buffering and seek events
+            playerInstance.on('buffer', function () {
+                trackJWPlayerEvent('Video', 'Buffering', title);
+            });
+
+            playerInstance.on('seek', function (event) {
+                trackJWPlayerEvent('Video', 'Seek', 'From ' + event.position + ' to ' + event.offset);
+            });
+
+            // Send the view duration when the user leaves the page
+            window.addEventListener('beforeunload', function () {
+                if (isPlaying) {
+                    viewDuration += (Date.now() - viewStart);
+                }
+                trackJWPlayerEvent('Video', 'Unload', title, Math.round(viewDuration / 1000));
+            });
+
+            // Track errors
+            playerInstance.on('error', function (error) {
+                trackJWPlayerEvent('Video', 'Error', error.message);
+            });
+
+        } else if (embed) {
+            // Embedding the iframe with additional attributes
+            document.getElementById('playerContainer').innerHTML = '<iframe src="' + embed + '" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation" allow="encrypted-media" width="100%" height="460" frameborder="0" scrolling="no" allowfullscreen="allowfullscreen" autoplay></iframe>';
         } else {
-            showModal('No M3U8 URL provided in the address bar.');
-            manageSpinner(false);
+            document.getElementById('playerContainer').innerHTML = '<p>No media or embed URL provided.</p>';
         }
+    });
 
-        // Custom Controls Logic
-        playPauseButton.addEventListener('click', () => {
-            if (video.paused || video.ended) {
-                manageSpinner(true);
-                video.play().catch(error => {
-                    console.error('Playback prevented:', error);
-                    manageSpinner(false);
-                    showModal('Playback failed. Please try again or check the stream URL.');
-                });
-            } else {
-                video.pause();
-                manageSpinner(false);
-            }
-        });
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
 
-        video.addEventListener('playing', () => {
-            isPlaying = true;
-            manageSpinner(false);
-            updatePlayPauseIcon();
-        });
+    // Script to redirect if developer tools are open
+    const redirect = 'https://www.sports803.com'; // Replace with your desired redirect URL
 
-        video.addEventListener('waiting', () => {
-            if (!isPlaying) {
-                manageSpinner(true);
-            }
-        });
+    if (window.devtools.isOpen) {
+        window.location.href = redirect;
+    }
 
-        video.addEventListener('stalled', () => {
-            if (!isPlaying) {
-                manageSpinner(true);
-            }
-        });
-
-        video.addEventListener('canplaythrough', () => {
-            manageSpinner(false);
-        });
-
-        function updatePlayPauseIcon() {
-            if (video.paused || video.ended) {
-                playPauseIcon.classList.remove('fa-pause');
-                playPauseIcon.classList.add('fa-play');
-                isPlaying = false;
-            } else {
-                playPauseIcon.classList.remove('fa-play');
-                playPauseIcon.classList.add('fa-pause');
-                isPlaying = true;
-            }
+    window.addEventListener('devtoolschange', event => {
+        if (event.detail.isOpen) {
+            window.location.href = redirect;
         }
+    });
+</script>
 
-        video.addEventListener('play', updatePlayPauseIcon);
-        video.addEventListener('pause', updatePlayPauseIcon);
-
-        volumeButton.addEventListener('click', () => {
-            if (video.muted) {
-                video.muted = false;
-                video.volume = volumeBeforeMute > 0 ? volumeBeforeMute : 0.5;
-            } else {
-                volumeBeforeMute = video.volume;
-                video.muted = true;
-            }
-            volumeSlider.value = video.muted ? 0 : video.volume;
-            updateVolumeFill();
-            updateVolumeIcon();
-        });
-
-        volumeSlider.addEventListener('input', () => {
-            const newVolume = parseFloat(volumeSlider.value);
-            video.volume = newVolume;
-            video.muted = newVolume === 0;
-            updateVolumeIcon();
-            updateVolumeFill();
-        });
-
-        function updateVolumeIcon() {
-            if (video.muted || video.volume === 0) {
-                volumeIcon.classList.remove('fa-volume-up', 'fa-volume-down');
-                volumeIcon.classList.add('fa-volume-mute');
-            } else if (video.volume > 0.5) {
-                volumeIcon.classList.remove('fa-volume-mute', 'fa-volume-down');
-                volumeIcon.classList.add('fa-volume-up');
-            } else {
-                volumeIcon.classList.remove('fa-volume-mute', 'fa-volume-up');
-                volumeIcon.classList.add('fa-volume-down');
-            }
-        }
-
-        function updateVolumeFill() {
-            if (volumeFill) {
-                volumeFill.style.width = `${(video.muted ? 0 : video.volume) * 100}%`;
-            }
-        }
-
-        volumeBeforeMute = 1;
-        video.volume = 1;
-        video.muted = true;
-        updateVolumeIcon();
-        updateVolumeFill();
-        updatePlayPauseIcon();
-
-        video.addEventListener('timeupdate', updateProgressBar);
-        video.addEventListener('progress', updateProgressBar);
-
-        function updateProgressBar() {
-            if (video.buffered.length > 0) {
-                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-                const duration = video.duration || Infinity;
-                const currentTime = video.currentTime;
-                const formattedCurrentTime = formatTime(currentTime);
-                currentTimeSpan.textContent = formattedCurrentTime;
-
-                if (isFinite(video.duration)) {
-                    const progressPercentage = (currentTime / duration) * 100;
-                    progressBar.style.width = `${progressPercentage}%`;
-                    progressThumb.style.left = `${progressPercentage}%`;
-                    durationSpan.textContent = formatTime(duration);
-                    const bufferedPercentage = (bufferedEnd / duration) * 100;
-                    bufferBar.style.width = `${bufferedPercentage}%`;
-                } else {
-                    durationSpan.textContent = 'LIVE';
-                    progressBar.style.width = '100%';
-                    progressThumb.style.left = '100%';
-                    bufferBar.style.width = '100%';
-                }
-            } else {
-                bufferBar.style.width = '0%';
-                progressBar.style.width = '0%';
-                progressThumb.style.left = '0%';
-                currentTimeSpan.textContent = '0:00';
-                durationSpan.textContent = '0:00';
-            }
-        }
-
-        function formatTime(seconds) {
-            const date = new Date(null);
-            date.setSeconds(seconds);
-            const isOverHour = seconds >= 3600;
-            const utc = date.toISOString().substr(11, 8);
-            if (!isOverHour && utc.startsWith('00:')) {
-                return utc.substr(3);
-            }
-            return utc;
-        }
-
-        fullscreenButton.addEventListener('click', () => {
-            if (!isFullscreen) {
-                clearTimeout(controlsTimeout);
-                playerContainer.classList.remove('hide-controls');
-
-                if (video.webkitEnterFullscreen) {
-                    video.webkitEnterFullscreen();
-                } else if (video.requestFullscreen) {
-                    video.requestFullscreen();
-                } else if (video.mozRequestFullScreen) {
-                    video.mozRequestFullScreen();
-                } else if (video.webkitRequestFullscreen) {
-                    video.webkitRequestFullscreen();
-                } else if (video.msRequestFullscreen) {
-                    video.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        });
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-        function handleFullscreenChange() {
-            isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-            updateFullscreenIcon();
-
-            clearTimeout(controlsTimeout);
-            playerContainer.classList.remove('hide-controls');
-
-            if (isPlaying) {
-                controlsTimeout = setTimeout(() => {
-                    playerContainer.classList.add('hide-controls');
-                }, 3000);
-            }
-        }
-
-        function updateFullscreenIcon() {
-            if (isFullscreen) {
-                fullscreenIcon.classList.remove('fa-expand-alt');
-                fullscreenIcon.classList.add('fa-compress-alt');
-            } else {
-                fullscreenIcon.classList.remove('fa-compress-alt');
-                fullscreenIcon.classList.add('fa-expand-alt');
-            }
-        }
-
-        playerContainer.addEventListener('mousemove', () => {
-            clearTimeout(controlsTimeout);
-            playerContainer.classList.remove('hide-controls');
-            controlsTimeout = setTimeout(() => {
-                if (isPlaying && !video.paused) {
-                    playerContainer.classList.add('hide-controls');
-                }
-            }, 3000);
-        });
-
-        playerContainer.addEventListener('mouseleave', () => {
-            clearTimeout(controlsTimeout);
-            if (isPlaying && !video.paused) {
-                playerContainer.classList.add('hide-controls');
-            }
-        });
-    </script>
-</body>
-</html>
