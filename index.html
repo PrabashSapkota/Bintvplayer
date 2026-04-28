@@ -1194,6 +1194,7 @@ Icone de Share.
         var getKEY2 = getParameterByName('key2');
 
         if (mora) {
+            // JWPlayer setup
             jwplayer.key = 'XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo';
 
             if (mora === "#") {
@@ -1238,8 +1239,6 @@ Icone de Share.
                 height: "100%",
                 aspectratio: "16:9",
                 autostart: true,
-                preload: "auto",                    // ← Important for faster DASH start
-                playbackRateControls: true,
                 cast: {},
                 logo: {
                     file: "",
@@ -1255,20 +1254,17 @@ Icone de Share.
                 },
                 skin: {
                     name: "netflix"
+                },
+                
+                hlsjsConfig: {
+                    debug: false,
+                    p2pConfig: {
+                        live: true // set false in VOD mode
+                    }
                 }
             };
 
-            // Only add hlsjsConfig for HLS streams (prevents interference with DASH)
-            if (mora.endsWith(".m3u8")) {
-                playerSetup.hlsjsConfig = {
-                    debug: false,
-                    p2pConfig: {
-                        live: true
-                    }
-                };
-            }
-
-            // Add DRM only for non-HLS (MPD/MP4 with clearkey)
+            // Add DRM configuration if not HLS
             if (!mora.endsWith(".m3u8")) {
                 playerSetup.drm = {
                     "clearkey": {
@@ -1280,7 +1276,7 @@ Icone de Share.
 
             playerInstance.setup(playerSetup);
 
-            // === Google Analytics tracking (unchanged) ===
+            // Google Analytics event tracking
             function trackJWPlayerEvent(eventCategory, eventAction, eventLabel, eventValue) {
                 gtag('event', eventAction, {
                     'event_category': eventCategory,
@@ -1289,10 +1285,12 @@ Icone de Share.
                 });
             }
 
+            // Variables to track view duration
             var viewDuration = 0;
             var viewStart = 0;
             var isPlaying = false;
 
+            // Start tracking the view duration
             playerInstance.on('play', function () {
                 if (!isPlaying) {
                     viewStart = Date.now();
@@ -1301,6 +1299,7 @@ Icone de Share.
                 trackJWPlayerEvent('Video', 'Play', title);
             });
 
+            // Pause tracking the view duration
             playerInstance.on('pause', function () {
                 if (isPlaying) {
                     viewDuration += (Date.now() - viewStart);
@@ -1309,6 +1308,7 @@ Icone de Share.
                 trackJWPlayerEvent('Video', 'Pause', title, Math.round(viewDuration / 1000));
             });
 
+            // Complete tracking the view duration
             playerInstance.on('complete', function () {
                 if (isPlaying) {
                     viewDuration += (Date.now() - viewStart);
@@ -1317,6 +1317,7 @@ Icone de Share.
                 trackJWPlayerEvent('Video', 'Complete', title, Math.round(viewDuration / 1000));
             });
 
+            // Track buffering and seek events
             playerInstance.on('buffer', function () {
                 trackJWPlayerEvent('Video', 'Buffering', title);
             });
@@ -1325,6 +1326,7 @@ Icone de Share.
                 trackJWPlayerEvent('Video', 'Seek', 'From ' + event.position + ' to ' + event.offset);
             });
 
+            // Send the view duration when the user leaves the page
             window.addEventListener('beforeunload', function () {
                 if (isPlaying) {
                     viewDuration += (Date.now() - viewStart);
@@ -1332,11 +1334,13 @@ Icone de Share.
                 trackJWPlayerEvent('Video', 'Unload', title, Math.round(viewDuration / 1000));
             });
 
+            // Track errors
             playerInstance.on('error', function (error) {
                 trackJWPlayerEvent('Video', 'Error', error.message);
             });
 
         } else if (embed) {
+            // Embedding the iframe with additional attributes
             document.getElementById('playerContainer').innerHTML = '<iframe src="' + embed + '" sandbox="allow-forms allow-pointer-lock allow-same-origin allow-scripts allow-top-navigation" allow="encrypted-media" width="100%" height="460" frameborder="0" scrolling="no" allowfullscreen="allowfullscreen" autoplay></iframe>';
         } else {
             document.getElementById('playerContainer').innerHTML = '<p>No media or embed URL provided.</p>';
@@ -1353,11 +1357,13 @@ Icone de Share.
         return decodeURIComponent(results[2].replace(/\+/g, ' '));
     }
 
-    // Devtools redirect (unchanged)
-    const redirect = 'https://www.sports803.com';
-    if (window.devtools && window.devtools.isOpen) {
+    // Script to redirect if developer tools are open
+    const redirect = 'https://www.sports803.com'; // Replace with your desired redirect URL
+
+    if (window.devtools.isOpen) {
         window.location.href = redirect;
     }
+
     window.addEventListener('devtoolschange', event => {
         if (event.detail.isOpen) {
             window.location.href = redirect;
