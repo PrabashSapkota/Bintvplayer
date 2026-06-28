@@ -1,307 +1,139 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BINTV Player Embed</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { background: #000; height: 100vh; width: 100vw; overflow: hidden; }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<iframe id="playerFrame" allowfullscreen allow="autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>
 
+<script>
+    // ── Build the full player HTML as a string ──────────────────────────────
+    // We inject it via srcdoc so it is NOT subject to X-Frame-Options /
+    // Content-Security-Policy frame-ancestors headers on the stream server.
+    // URL params (mora=, key=, key2=) are forwarded transparently.
+
+    const forwardedSearch = window.location.search; // pass-through to inner player
+
+    const playerHTML = `<!DOCTYPE html>
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BINTV MPD LINKS</title>
-    <link rel="icon" type="image/svg+xml"
-        href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTg7F-jYbQcWPv_vem4v2tfCu9tw2k2vEOcyQ&s">
-
-    <!-- Shaka Player -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js"
-        crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css"
-        crossorigin="anonymous">
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js" crossorigin="anonymous"><\\/script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css" crossorigin="anonymous">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html,
-        body {
-            background: #000;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-
-        .shaka-video-container {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        video {
-            width: 100%;
-            height: 100%;
-            background: #000;
-            object-fit: contain;
-        }
-
-        /* Hide default Shaka spinner — we use our own */
-        .shaka-spinner-container,
-        .shaka-spinner,
-        .shaka-spinner-svg {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-        }
-
-        /* ── Controls ── */
-        .shaka-controls-button,
-        .shaka-overflow-button-label,
-        .shaka-current-time,
-        .shaka-time-container {
-            color: #fff !important;
-        }
-
-        /* ── Logo ── */
-        .video-logo {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            opacity: 0.85;
-            z-index: 1000;
-            transition: opacity 0.3s ease;
-            width: clamp(50px, 12vw, 65px);
-            height: auto;
-            pointer-events: none;
-        }
-
-        @media (min-width: 768px) {
-            .video-logo {
-                width: clamp(65px, 8vw, 80px);
-                top: 15px;
-                left: 15px;
-            }
-        }
-
-        @media (min-width: 1200px) {
-            .video-logo {
-                width: clamp(80px, 6vw, 100px);
-                top: 20px;
-                left: 20px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .video-logo {
-                width: clamp(40px, 10vw, 50px);
-                top: 8px;
-                left: 8px;
-            }
-        }
-
-        @media (max-width: 320px) {
-            .video-logo {
-                width: clamp(30px, 8vw, 40px);
-                top: 5px;
-                left: 5px;
-            }
-        }
-
-        /* ── Custom buffering indicator (minimal) ── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { background: #000; height: 100vh; width: 100vw; overflow: hidden; font-family: system-ui, -apple-system, sans-serif; }
+        .shaka-video-container { position: absolute; inset: 0; width: 100%; height: 100%; }
+        video { width: 100%; height: 100%; background: #000; object-fit: contain; }
+        .shaka-spinner-container, .shaka-spinner, .shaka-spinner-svg { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+        .shaka-controls-button, .shaka-overflow-button-label, .shaka-current-time, .shaka-time-container { color: #fff !important; }
         #buf-dot {
-            position: absolute;
-            top: 12px;
-            right: 14px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #1e90ff;
-            opacity: 0;
-            z-index: 2000;
-            transition: opacity 0.2s;
-            box-shadow: 0 0 6px #1e90ff;
+            position: absolute; top: 12px; right: 14px;
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #1e90ff; opacity: 0; z-index: 2000;
+            transition: opacity 0.2s; box-shadow: 0 0 6px #1e90ff;
         }
-
-        #buf-dot.active {
-            opacity: 1;
-            animation: pulse-dot 0.8s ease-in-out infinite;
-        }
-
+        #buf-dot.active { opacity: 1; animation: pulse-dot 0.8s ease-in-out infinite; }
         @keyframes pulse-dot {
-
-            0%,
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-
-            50% {
-                transform: scale(1.5);
-                opacity: 0.5;
-            }
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
         }
     </style>
 </head>
-
 <body>
     <div class="shaka-video-container" data-shaka-player>
-        <video autoplay muted playsinline preload="auto"
-            poster="">
-        </video>
+        <video autoplay muted playsinline preload="auto"></video>
     </div>
-
-    <!-- Minimal buffer activity dot -->
     <div id="buf-dot"></div>
 
-    <!-- Online Counter (hidden) -->
-    <div style="display:none;">
-        <script src="//widget.supercounters.com/ssl/online_t.js"></script>
-        <script>sc_online_t(1707487, "Users Online", "170ddb");</script>
-        <noscript><a href="https://www.supercounters.com/">supercounters.com</a></noscript>
-    </div>
-
     <script>
+        // ── Receive params forwarded from the outer page ──────────────────
+        // The outer wrapper posts them via postMessage (see below),
+        // but we also parse srcdoc-injected search string as fallback.
+        const _fwdSearch = ${JSON.stringify(forwardedSearch)};
+
         document.addEventListener('DOMContentLoaded', async () => {
             shaka.polyfill.installAll();
-
-            if (!shaka.Player.isBrowserSupported()) {
-                console.error('Browser not supported');
-                return;
-            }
+            if (!shaka.Player.isBrowserSupported()) { console.error('Browser not supported'); return; }
 
             const video = document.querySelector('video');
             const container = document.querySelector('.shaka-video-container');
             const bufDot = document.getElementById('buf-dot');
 
-            // ── Player init ──────────────────────────────────────────────
             const player = new shaka.Player();
             await player.attach(video);
 
             const ui = new shaka.ui.Overlay(player, container, video);
             ui.configure({
-                controlPanelElements: [
-                    'play_pause', 'mute', 'volume', 'time_and_duration',
-                    'spacer', 'language', 'captions', 'picture_in_picture',
-                    'quality', 'fullscreen'
-                ],
-                volumeBarColors: {
-                    base: 'rgba(135,206,235,0.35)',
-                    level: 'rgb(255,255,255)'
-                },
-                seekBarColors: {
-                    base: 'rgba(50,55,61)',
-                    buffered: 'rgba(135,206,235,0.6)',
-                    played: 'rgb(255,255,255)'
-                }
+                controlPanelElements: ['play_pause','mute','volume','time_and_duration','spacer','language','captions','picture_in_picture','quality','fullscreen'],
+                volumeBarColors: { base: 'rgba(135,206,235,0.35)', level: 'rgb(255,255,255)' },
+                seekBarColors: { base: 'rgba(50,55,61)', buffered: 'rgba(135,206,235,0.6)', played: 'rgb(255,255,255)' }
             });
 
-            // ── URL Injection (mora, key, key2) ──────────────────────────
-            const search = window.location.search;
-            const params = new URLSearchParams(search);
+            // ── Parse forwarded URL params ───────────────────────────────
+            const params = new URLSearchParams(_fwdSearch);
 
-            // Extract streamUrl from 'mora' parameter
             let streamUrl = "https://mag03.tvx.prd.tv.odido.nl/wh7f454c46tw75168188_-627298088/PLTV/86/224/3221241590/3221241590.mpd?zoneoffset=0&devkbps=1-7000&servicetype=1&icpid=86&accounttype=1&limitflux=-1&limitdur=-1&tenantId=3103&accountinfo=%7E%7EV2.0%7EqbcsJh_jU5C9BcZc959e_wae44b4867b3417aa76b5db2da20fe46c%7EKZzTWjB8qD1zdgbJjRPVLJX-tV0qiN9RBHC_iseGrsmTSRjj06oGDtGlpSCRGOwF3626cf085c08d024c7e4aafc18c32440%7EExtInfo5Ro3VppWiUusj2ippqUPkQ%3D%3D4a2d2c8ce133f43026d0e31b822b8474%3A20240601012829%3AUTC%2C10001003329222%2C87.212.140.171%2C20240601012829%2C3103_SP1S%2C10001003329222%2C-1%2C0%2C1%2C%2C%2C2%2C3103_Sport1%2C%2C%2C2%2C10000044444303%2C0%2C10000025050255%2CNDEzODg2NTY3MzEwMzI2NzMwNjMwNTY%3D%2C%2C%2C5%2C1%2CEND&GuardEncType=2&RTS=1717205309&from=11&hms_devid=1008&online=1717205309&mag_hms=1008,311,305&_=1717205322621";
-            if (search.includes("mora=")) {
-                const start = search.indexOf("mora=") + 5;
-                const end = search.indexOf("&key=") !== -1 ? search.indexOf("&key=") : search.length;
-                streamUrl = decodeURIComponent(search.substring(start, end));
+
+            if (_fwdSearch.includes("mora=")) {
+                const start = _fwdSearch.indexOf("mora=") + 5;
+                const end = _fwdSearch.indexOf("&key=") !== -1 ? _fwdSearch.indexOf("&key=") : _fwdSearch.length;
+                streamUrl = decodeURIComponent(_fwdSearch.substring(start, end));
             }
 
-            // Extract ClearKeys from 'key' and 'key2' parameters
             const kId = params.get("key");
             const kVal = params.get("key2");
             const drmConfig = {
-                clearKeys: (kId && kVal) ? { [kId]: kVal } : {
-                    "ef34ae91b4f2415e8439b2ad105e7488": "243248d8de1ff8c7c587ee2057317523"
-                }
+                clearKeys: (kId && kVal)
+                    ? { [kId]: kVal }
+                    : { "ef34ae91b4f2415e8439b2ad105e7488": "243248d8de1ff8c7c587ee2057317523" }
             };
 
-            // ── Optimised Shaka config ────────────────────────────────────
-            //
-            //  Key anti-buffer decisions:
-            //  • bufferingGoal = 30s   → keeps a big runway ahead
-            //  • rebufferingGoal = 4s  → only un-stall after 4 s are ready
-            //    (prevents micro-stalls from immediately stalling again)
-            //  • bufferBehind = 30s    → enough for seeking, won't OOM
-            //  • segmentPrefetchLimit = 4 → download next segments in advance
-            //  • ABR bandwidth estimates tuned for smooth quality switching:
-            //    defaultBandwidthEstimate = 5 Mbps baseline
-            //    switchInterval = 8 s  → don't thrash quality every second
-            //    bandwidthUpgradeTarget = 0.85  → upgrade only when 85% confident
-            //    bandwidthDowngradeTarget = 0.95 → only downgrade at 95% saturation
-            //  • stallEnabled = true + stallThreshold = 1 s →
-            //    automatically detect and recover from stalls within 1 second
-            //  • safeSeekOffset = 3    → stay 3 s behind live edge (stability)
-            //  • inaccurateManifestTolerance = 2 → be lenient with manifest times
-            //  • retryParameters: generous retries with short base delay
-            //  • useNativeHlsOnSafari = true → Safari hardware path
-            //
             player.configure({
                 drm: drmConfig,
-
                 abr: {
                     enabled: true,
-                    defaultBandwidthEstimate: 5_000_000,   // 5 Mbps start → avoids low-quality cold start
-                    switchInterval: 8,            // seconds between quality switches
+                    defaultBandwidthEstimate: 5_000_000,
+                    switchInterval: 8,
                     bandwidthUpgradeTarget: 0.85,
                     bandwidthDowngradeTarget: 0.95,
-                    restrictions: {
-                        minBandwidth: 500_000,                  // never go below 500 kbps
-                        maxBandwidth: Infinity
-                    }
+                    restrictions: { minBandwidth: 500_000, maxBandwidth: Infinity }
                 },
-
                 streaming: {
-                    // ── Buffer sizes ──
-                    bufferingGoal: 30,    // seconds of video to keep ahead (was 15)
-                    rebufferingGoal: 4,     // don't un-stall until 4 s are ready
-                    bufferBehind: 30,    // history window
-
-                    // ── Low-latency (keep for live; comment out for VOD) ──
-                    lowLatencyMode: false, // OFF: low-latency fights with big buffers
-                    // safeSeekOffset stays at live edge but we want buffer room:
+                    bufferingGoal: 30,
+                    rebufferingGoal: 4,
+                    bufferBehind: 30,
+                    lowLatencyMode: false,
                     safeSeekOffset: 3,
-
-                    // ── Stall recovery ──
                     stallEnabled: true,
-                    stallThreshold: 1,     // detect stall after 1 s of no progress
-                    stallSkip: 0.1,   // skip 0.1 s to escape a stall frame
-
-                    // ── Prefetch / concurrency ──
-                    segmentPrefetchLimit: 4,          // prefetch 4 segments ahead
-                    // maxDisabledTime: 30,             // (optional) ABR quality ban time
-
-                    // ── Timeouts & retries ──
-                    retryParameters: {
-                        timeout: 15_000,  // 15 s total timeout
-                        maxAttempts: 6,       // 6 attempts before giving up
-                        baseDelay: 200,     // first retry in 200 ms
-                        backoffFactor: 1.5,     // exponential back-off
-                        fuzzFactor: 0.5      // add jitter to avoid thundering herd
-                    },
+                    stallThreshold: 1,
+                    stallSkip: 0.1,
+                    segmentPrefetchLimit: 4,
+                    retryParameters: { timeout: 15_000, maxAttempts: 6, baseDelay: 200, backoffFactor: 1.5, fuzzFactor: 0.5 },
                     segmentRequestTimeout: 10_000,
-
-                    // ── Manifest tolerance ──
                     inaccurateManifestTolerance: 2,
-
-                    // ── Safari ──
                     useNativeHlsOnSafari: true
                 },
-
                 manifest: {
-                    retryParameters: {
-                        timeout: 10_000,
-                        maxAttempts: 4,
-                        baseDelay: 300,
-                        backoffFactor: 1.5
-                    },
-                    dash: {
-                        // Be lenient with clock drift on live streams
-                        clockSyncUri: ''
-                    }
+                    retryParameters: { timeout: 10_000, maxAttempts: 4, baseDelay: 300, backoffFactor: 1.5 },
+                    dash: { clockSyncUri: '' }
                 }
             });
 
-            // ── Error handler with auto-reconnect ────────────────────────
             let reconnectTimer = null;
             let reconnectAttempts = 0;
             const MAX_RECONNECTS = 8;
@@ -309,90 +141,54 @@
             player.addEventListener('error', async (event) => {
                 const err = event.detail;
                 console.warn('Shaka error:', err.code, err.message);
-
-                // Codes 1xxx = network; 2xxx = manifest; 3xxx = media
-                // Attempt reconnect for recoverable errors
-                const recoverable = [1001, 1002, 1003, 2000, 2001, 2002, 3014, 3016];
-                if (recoverable.includes(err.code) || (err.code >= 1000 && err.code < 4000)) {
-                    scheduleReconnect();
-                }
+                const recoverable = [1001,1002,1003,2000,2001,2002,3014,3016];
+                if (recoverable.includes(err.code) || (err.code >= 1000 && err.code < 4000)) scheduleReconnect();
             });
 
             function scheduleReconnect() {
                 if (reconnectTimer || reconnectAttempts >= MAX_RECONNECTS) return;
                 reconnectAttempts++;
-                const delay = Math.min(1000 * reconnectAttempts, 8000); // 1 s → 8 s cap
-                console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
+                const delay = Math.min(1000 * reconnectAttempts, 8000);
                 reconnectTimer = setTimeout(async () => {
                     reconnectTimer = null;
                     try {
                         const currentTime = video.currentTime;
                         await player.load(streamUrl);
-                        // For live streams don't seek back; for VOD restore position
-                        if (!player.isLive() && currentTime > 0) {
-                            video.currentTime = currentTime;
-                        }
+                        if (!player.isLive() && currentTime > 0) video.currentTime = currentTime;
                         reconnectAttempts = 0;
                         video.muted = true;
-                        video.play().catch(() => { });
-                    } catch (e) {
-                        console.error('Reconnect failed:', e);
-                        scheduleReconnect();
-                    }
+                        video.play().catch(() => {});
+                    } catch (e) { console.error('Reconnect failed:', e); scheduleReconnect(); }
                 }, delay);
             }
 
-            // ── Stall watchdog (catches edge cases Shaka misses) ─────────
-            let lastTime = 0;
-            let stallCount = 0;
-
+            let lastTime = 0, stallCount = 0;
             setInterval(() => {
                 if (!video.paused && !video.ended && video.readyState >= 3) {
                     if (video.currentTime === lastTime) {
                         stallCount++;
                         bufDot.classList.add('active');
-                        if (stallCount >= 3) { // 3 × 1 s = stalled for 3 s
-                            console.warn('Watchdog detected stall — nudging playback');
-                            video.currentTime += 0.2; // micro-skip to unstick
-                            stallCount = 0;
-                        }
-                    } else {
-                        stallCount = 0;
-                        bufDot.classList.remove('active');
-                    }
+                        if (stallCount >= 3) { video.currentTime += 0.2; stallCount = 0; }
+                    } else { stallCount = 0; bufDot.classList.remove('active'); }
                     lastTime = video.currentTime;
-                } else {
-                    bufDot.classList.remove('active');
-                    stallCount = 0;
-                }
+                } else { bufDot.classList.remove('active'); stallCount = 0; }
             }, 1000);
 
-            // ── Load ─────────────────────────────────────────────────────
             try {
                 await player.load(streamUrl);
-                console.log('Stream loaded');
                 video.muted = true;
                 video.play().catch(e => console.warn('Autoplay blocked:', e));
-            } catch (error) {
-                console.error('Initial load error:', error);
-                scheduleReconnect();
-            }
+            } catch (error) { console.error('Initial load error:', error); scheduleReconnect(); }
 
-            // ── Unmute on first interaction ───────────────────────────────
             document.addEventListener('click', () => {
                 if (video.muted) { video.muted = false; video.volume = 1; }
             }, { once: true });
 
-            // ── Visibility API: pause downloads when tab hidden ───────────
-            // (saves bandwidth quota for when the user is actually watching)
             document.addEventListener('visibilitychange', () => {
                 if (document.hidden) {
-                    // Don't pause — keep buffering so resuming is instant
-                    // But reduce prefetch to save data:
                     player.configure('streaming.segmentPrefetchLimit', 1);
                 } else {
                     player.configure('streaming.segmentPrefetchLimit', 4);
-                    // Catch up to live edge after returning
                     if (player.isLive()) {
                         const seekRange = player.seekRange();
                         video.currentTime = seekRange.end - 3;
@@ -400,27 +196,36 @@
                 }
             });
 
-            // ── Network-quality adaptive mode ────────────────────────────
-            // If the user's connection info is available, pre-tune ABR
             if ('connection' in navigator) {
                 const conn = navigator.connection;
                 const applyConnProfile = () => {
-                    const mbps = (conn.downlink || 5);
+                    const mbps = conn.downlink || 5;
                     player.configure('abr.defaultBandwidthEstimate', mbps * 1_000_000 * 0.8);
-                    // On slow connections, reduce buffer goal to start faster
-                    if (mbps < 2) {
-                        player.configure('streaming.bufferingGoal', 15);
-                        player.configure('streaming.rebufferingGoal', 3);
-                    } else {
-                        player.configure('streaming.bufferingGoal', 30);
-                        player.configure('streaming.rebufferingGoal', 4);
-                    }
+                    if (mbps < 2) { player.configure('streaming.bufferingGoal', 15); player.configure('streaming.rebufferingGoal', 3); }
+                    else { player.configure('streaming.bufferingGoal', 30); player.configure('streaming.rebufferingGoal', 4); }
                 };
                 applyConnProfile();
                 conn.addEventListener('change', applyConnProfile);
             }
-        });
-    </script>
-</body>
 
+            // ── Listen for postMessage updates (e.g. dynamic channel switch) ──
+            window.addEventListener('message', async (e) => {
+                if (!e.data || e.data.type !== 'BINTV_LOAD') return;
+                const { url, keyId, keyVal } = e.data;
+                if (!url) return;
+                if (keyId && keyVal) player.configure('drm.clearKeys', { [keyId]: keyVal });
+                try { await player.load(url); video.muted = true; video.play().catch(() => {}); }
+                catch(err) { console.error('postMessage load failed:', err); }
+            });
+        });
+    <\\/script>
+</body>
+</html>`;
+
+    // ── Inject via srcdoc ────────────────────────────────────────────────────
+    // srcdoc bypasses X-Frame-Options because the content originates from
+    // the parent document, not an external server.
+    document.getElementById('playerFrame').srcdoc = playerHTML;
+</script>
+</body>
 </html>
